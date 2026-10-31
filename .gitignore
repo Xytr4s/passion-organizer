@@ -1,0 +1,9 @@
+# dati locali
+dati.json
+dati.tmp
+copertine.json
+registro.json
+eliminati.json
+config.json
+app.log
+__pycache__/

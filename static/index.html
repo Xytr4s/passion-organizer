@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gestore Giochi</title>
+<style>
+:root{--bg:#12141a;--pan:#1b1e27;--pan2:#242836;--bordo:#2f3445;--testo:#e7e9ef;--tenue:#9aa1b5;--acc:#5b8cff;--ok:#3ecf8e;--warn:#f5b84d;--ko:#ff6b6b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--testo);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--pan);border-bottom:1px solid var(--bordo);padding:10px 18px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+h1{font-size:18px;margin:0 10px 0 0}
+nav{display:flex;gap:4px;flex-wrap:wrap}
+nav button{background:none;border:0;color:var(--tenue);padding:7px 12px;border-radius:7px;cursor:pointer;font-size:14px}
+nav button.attivo,nav button:hover{background:var(--pan2);color:var(--testo)}
+.badge-n{background:var(--acc);color:#fff;border-radius:9px;padding:0 6px;font-size:11px;margin-left:4px}
+.spazio{flex:1}
+input,select,textarea{background:var(--pan2);border:1px solid var(--bordo);color:var(--testo);border-radius:7px;padding:7px 10px;font:inherit}
+button.b{background:var(--pan2);border:1px solid var(--bordo);color:var(--testo);border-radius:7px;padding:7px 12px;cursor:pointer;font:inherit}
+button.b:hover{border-color:var(--acc)}
+button.p{background:var(--acc);border-color:var(--acc);color:#fff}
+button.k{border-color:var(--ko);color:var(--ko)}
+button:disabled{opacity:.5;cursor:default}
+main{padding:16px 18px 60px}
+.filtri{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.tenue{color:var(--tenue)}
+.griglia{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.card{background:var(--pan);border:1px solid var(--bordo);border-radius:10px;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;transition:border-color .15s}
+.card:hover{border-color:var(--acc)}
+.card.match{border:2px solid var(--ok)}
+.card.nomatch{border:2px solid #3d7bff}
+.card.forse{border:2px solid var(--warn)}
+.card.match:hover,.card.nomatch:hover,.card.forse:hover{filter:brightness(1.12)}
+.t.match{color:var(--ok)}.t.nomatch{color:#7aa5ff}.t.forse{color:var(--warn)}
+.cop{aspect-ratio:460/215;background:linear-gradient(135deg,#2a3150,#1d2233);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#4b5680;position:relative}
+.cop img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+.corpo{padding:8px 10px 10px;display:flex;flex-direction:column;gap:4px;flex:1}
+.nome{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meta{display:flex;gap:5px;flex-wrap:wrap;font-size:12px}
+.t{background:var(--pan2);border-radius:5px;padding:1px 6px;color:var(--tenue)}
+.t.steam{color:#8fb4ff}.t.inst{color:var(--warn)}.t.rec{color:var(--ok)}.t.ko{color:var(--ko)}
+.azioni{display:flex;gap:6px;margin-top:auto;padding-top:6px}
+.azioni button{flex:1}
+.azioni button.elim{flex:0 0 auto}
+table{width:100%;border-collapse:collapse}
+td,th{padding:7px 8px;border-bottom:1px solid var(--bordo);text-align:left;vertical-align:top}
+th{color:var(--tenue);font-weight:500;font-size:12px}
+.blocco{background:var(--pan);border:1px solid var(--bordo);border-radius:10px;padding:14px;margin-bottom:14px}
+.barra{height:16px;background:var(--pan2);border-radius:8px;overflow:hidden;display:flex}
+.barra div{height:100%}
+.percorso{font-family:Consolas,monospace;font-size:12px;color:var(--tenue);word-break:break-all}
+#progresso{min-width:260px;font-size:12px;color:var(--tenue)}
+#progresso .barra{height:6px;margin-top:3px}
+#modale{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:10;padding:16px}
+#modale .box{background:var(--pan);border:1px solid var(--bordo);border-radius:12px;max-width:760px;width:100%;max-height:90vh;overflow:auto;padding:18px}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--pan2);border:1px solid var(--bordo);padding:10px 16px;border-radius:9px;display:none;z-index:20}
+.riga{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
+.ok{color:var(--ok)}.warn{color:var(--warn)}.ko{color:var(--ko)}
+.vuoto{padding:40px;text-align:center;color:var(--tenue)}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎮 Gestore Giochi</h1>
+  <nav id="nav"></nav>
+  <div class="spazio"></div>
+  <div id="progresso"></div>
+  <button class="b" id="btnScan" onclick="scansiona(false)">↻ Aggiorna</button>
+  <button class="b" title="Chiudi l'app" onclick="esci()">⏻</button>
+</header>
+<main id="main"></main>
+<div id="modale" onclick="if(event.target===this)chiudiModale()"><div class="box" id="mbox"></div></div>
+<div id="toast"></div>
+
+<script>
+let D = {giochi:[], dischi:[], doppioni:[], cestini:[], fonti:[]};
+let PER_ID = {};
+let INSTALLATI = {};
+let INSTALLER = {};
+// La "controparte" di un installer sono i giochi installati, e viceversa.
+const controparte = g => isInst(g) ? INSTALLATI : INSTALLER;
+const installatoDi = g => (controparte(g)[g.chiave] || []).filter(x => x.id !== g.id);
+// "Forse": nome che inizia come quello della controparte (o viceversa),
+// tipico di DLC/espansioni ("Kingdom Two Crowns Norse Lands" -> "Kingdom Two Crowns").
+let _simili = {};
+function similiDi(g){
+  const ck = (isInst(g) ? "i|" : "g|") + g.chiave;
+  if (ck in _simili) return _simili[ck];
+  const k = g.chiave, r = [], mappa = controparte(g);
+  if (k.length >= 6 && !installatoDi(g).length)
+    for (const ik in mappa)
+      if (ik.length >= 6 && ik !== k && (k.startsWith(ik) || ik.startsWith(k))) r.push(...mappa[ik]);
+  return _simili[ck] = r;
+}
+const statoInst = g => installatoDi(g).length ? "match" : similiDi(g).length ? "forse" : "nomatch";
+let vista = "libreria";
+const F = {testo:"", disco:"", tipo:"", ord:"nome"};
+let limite = 200;
+
+const isInst = g => g.tipo==="installer" || g.tipo==="archivio";
+const nelGruppo = g => /\\_Installer\\/i.test(g.percorso);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const GB = b => b == null ? "?" : b >= 1e12 ? (b/1e12).toFixed(2)+" TB" : b >= 1e9 ? (b/1e9).toFixed(1)+" GB" : (b/1e6).toFixed(0)+" MB";
+const api = async (url, body) => {
+  const r = await fetch(url, body === undefined ? {} : {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
+  return r.json();
+};
+function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.style.display="block";clearTimeout(t._h);t._h=setTimeout(()=>t.style.display="none",3500)}
+function modale(html){document.getElementById("mbox").innerHTML=html;document.getElementById("modale").style.display="flex"}
+function chiudiModale(){document.getElementById("modale").style.display="none"}
+
+const VISTE = [
+  ["libreria","Libreria"],["recenti","Recenti"],["installer","Installer"],["doppioni","Doppioni"],
+  ["spazio","Spazio"],["riordina","Riordina"],["impostazioni","Impostazioni"]];
+
+function disegnaNav(){
+  document.getElementById("nav").innerHTML = VISTE.map(([k,t]) => {
+    let n = k==="libreria" ? D.giochi.filter(g=>!isInst(g)).length : k==="installer" ? D.giochi.filter(isInst).length
+          : k==="doppioni" ? D.doppioni.length : k==="recenti" ? D.giochi.filter(g=>g.recente).length : 0;
+    return `<button class="${vista===k?"attivo":""}" onclick="vai('${k}')">${t}${n?`<span class="badge-n">${n}</span>`:""}</button>`;
+  }).join("");
+}
+function vai(k){vista=k;limite=200;F.tipo="";disegna()}
+
+async function carica(){
+  D = await api("/api/libreria");
+  PER_ID = Object.fromEntries(D.giochi.map(g => [g.id, g]));
+  // Per ogni nome normalizzato: dove è installato (cartelle + Steam)
+  INSTALLATI = {};
+  D.giochi.filter(g => g.steam || g.tipo==="installato").forEach(g => (INSTALLATI[g.chiave] ||= []).push(g));
+  INSTALLER = {};
+  D.giochi.filter(isInst).forEach(g => (INSTALLER[g.chiave] ||= []).push(g));
+  _simili = {};
+  disegna();
+}
+
+function disegna(){
+  disegnaNav();
+  const m = document.getElementById("main");
+  m.innerHTML = {libreria:vLibreria, recenti:vRecenti, installer:vInstaller, doppioni:vDoppioni, spazio:vSpazio, riordina:vRiordina, impostazioni:vImpostazioni}[vista]();
+  if (vista==="riordina") caricaRegistro();
+}
+
+// ------------------------------------------------------------ card
+function copertina(g){
+  const iniz = esc(g.nome.split(/\s+/).slice(0,2).map(w=>w[0]).join("").toUpperCase());
+  const img = g.copertina ? `<img loading="lazy" src="https://cdn.akamai.steamstatic.com/steam/apps/${g.copertina}/header.jpg" onerror="this.remove()">` : "";
+  return `<div class="cop">${iniz}${img}</div>`;
+}
+const ETICHETTE_TIPO = {installato:"", installer:"installer", archivio:"archivio", vuoto:"vuota", sconosciuto:"senza exe"};
+function card(g){
+  const tipo = ETICHETTE_TIPO[g.tipo];
+  const puoGiocare = g.steam || (g.tipo==="installato" && g.exe);
+  let cornice = "", etichettaInst = "";
+  const dove = l => [...new Set(l.map(x=>x.steam?x.disco+" (Steam)":x.disco))].join(", ");
+  if (!isInst(g) && g.tipo !== "vuoto") {
+    cornice = statoInst(g);
+    if (cornice==="match") {
+      const l = installatoDi(g);
+      etichettaInst = `<span class="t match" title="${esc(l.map(x=>x.percorso).join("\n"))}">📦 installer su ${dove(l)}${l.length>1?` (${l.length})`:""}</span>`;
+    } else if (cornice==="forse") {
+      const s = similiDi(g);
+      etichettaInst = `<span class="t forse" title="${esc(s.map(x=>x.percorso).join("\n"))}">? installer simile: ${esc(s[0].nome)}</span>`;
+    } else etichettaInst = `<span class="t nomatch">nessun installer</span>`;
+  }
+  if (isInst(g)) {
+    cornice = statoInst(g);
+    if (cornice==="match") {
+      const inst = installatoDi(g);
+      etichettaInst = `<span class="t match" title="${esc(inst.map(x=>x.percorso).join("\n"))}">✔ installato su ${dove(inst)}</span>`;
+    } else if (cornice==="forse") {
+      const s = similiDi(g);
+      etichettaInst = `<span class="t forse" title="${esc(s.map(x=>x.percorso).join("\n"))}">? simile a ${esc(s[0].nome)}${s.length>1?` (+${s.length-1})`:""}</span>`;
+    } else etichettaInst = `<span class="t nomatch">non installato</span>`;
+  }
+  return `<div class="card ${cornice}" onclick="dettaglio('${g.id}')">
+    ${copertina(g)}
+    <div class="corpo">
+      <div class="nome" title="${esc(g.nome)}">${esc(g.nome)}</div>
+      <div class="meta">
+        <span class="t">${g.disco}</span><span class="t">${GB(g.dimensione)}</span>
+        ${g.versione?`<span class="t">v${esc(g.versione)}</span>`:""}
+        ${g.steam?`<span class="t steam">Steam</span>`:""}
+        ${g.recente?`<span class="t rec">recente${g.ordine?" #"+g.ordine:""}</span>`:""}
+        ${tipo?`<span class="t inst">${tipo}</span>`:""}${etichettaInst}
+        ${(g.tag||[]).includes("Demo")?`<span class="t">demo</span>`:""}
+      </div>
+      <div class="azioni">
+        ${isInst(g)
+          ? `<button class="b" onclick="event.stopPropagation();apri('${g.id}')">📁 Apri</button>`
+          : `<button class="b ${puoGiocare?"p":""}" ${puoGiocare?"":"disabled"} onclick="event.stopPropagation();gioca('${g.id}')">▶ Gioca</button>
+             <button class="b" title="Apri cartella" onclick="event.stopPropagation();apri('${g.id}')">📁</button>`}
+        <button class="b k elim" title="${g.steam?"Disinstalla con Steam":"Elimina definitivamente"}" onclick="event.stopPropagation();eliminaDaCard('${g.id}')">🗑</button>
+      </div>
+    </div></div>`;
+}
+function filtra(lista){
+  const q = F.testo.toLowerCase();
+  let r = lista.filter(g => (!q || g.nome.toLowerCase().includes(q) || g.nome_cartella.toLowerCase().includes(q))
+    && (!F.disco || g.disco===F.disco)
+    && (!F.tipo || (F.tipo==="steam" ? g.steam : F.tipo==="giocabili" ? (g.steam || g.tipo==="installato")
+        : F.tipo==="con_gioco" ? statoInst(g)==="match" : F.tipo==="forse" ? statoInst(g)==="forse"
+        : F.tipo==="senza_gioco" ? statoInst(g)==="nomatch" : g.tipo===F.tipo)));
+  const o = {nome:(a,b)=>a.nome.localeCompare(b.nome), dim:(a,b)=>(b.dimensione||0)-(a.dimensione||0),
+             data:(a,b)=>(b.modificato||0)-(a.modificato||0), disco:(a,b)=>a.disco.localeCompare(b.disco)||a.nome.localeCompare(b.nome)};
+  return r.sort(o[F.ord]);
+}
+function barraFiltri(){
+  const dischi = [...new Set(D.giochi.map(g=>g.disco))].sort();
+  return `<div class="filtri">
+    <input id="cerca" placeholder="🔍 Cerca un gioco…" value="${esc(F.testo)}" oninput="F.testo=this.value;limite=200;aggiornaGriglia()" style="min-width:240px">
+    <select onchange="F.disco=this.value;aggiornaGriglia()"><option value="">Tutti i dischi</option>${dischi.map(d=>`<option ${F.disco===d?"selected":""}>${d}</option>`).join("")}</select>
+    <select onchange="F.tipo=this.value;aggiornaGriglia()">
+      ${(vista==="installer" ? [["","Installer e archivi"],["con_gioco","🟩 Con gioco installato"],["forse","🟨 Forse (nome simile)"],["senza_gioco","🟦 Gioco non installato"],["installer","Solo cartelle di installazione"],["archivio","Solo archivi (rar/zip/iso…)"]]
+          : [["","Tutti i tipi"],["giocabili","Pronti da giocare"],["con_gioco","🟩 Con installer"],["forse","🟨 Installer simile"],["senza_gioco","🟦 Senza installer"],["steam","Solo Steam"],["sconosciuto","Senza eseguibile"],["vuoto","Cartelle vuote"]])
+        .map(([v,t])=>`<option value="${v}" ${F.tipo===v?"selected":""}>${t}</option>`).join("")}</select>
+    <select onchange="F.ord=this.value;aggiornaGriglia()">
+      ${[["nome","Ordina: nome"],["dim","Ordina: dimensione"],["data","Ordina: modificati di recente"],["disco","Ordina: disco"]]
+        .map(([v,t])=>`<option value="${v}" ${F.ord===v?"selected":""}>${t}</option>`).join("")}</select>
+    <span class="tenue" id="conteggio"></span>
+  </div>`;
+}
+function griglia(lista){
+  if (!lista.length) return `<div class="vuoto">Nessun gioco. ${D.giochi.length?"":"Premi “↻ Aggiorna” per cercare i giochi sui dischi."}</div>`;
+  return `<div class="griglia">${lista.slice(0,limite).map(card).join("")}</div>
+    ${lista.length>limite?`<div class="riga" style="justify-content:center"><button class="b" onclick="limite+=300;aggiornaGriglia()">Mostra altri (${lista.length-limite})</button></div>`:""}`;
+}
+function aggiornaGriglia(){
+  const base = vista==="recenti" ? D.giochi.filter(g=>g.recente)
+             : vista==="installer" ? D.giochi.filter(isInst)
+             : D.giochi.filter(g=>!isInst(g));
+  const lista = vista==="recenti" && F.ord==="nome" && !F.testo ? base.filter(g=>!F.disco||g.disco===F.disco).sort((a,b)=>(b.ordine||0)-(a.ordine||0)) : filtra(base);
+  document.getElementById("zona").innerHTML = griglia(lista);
+  const tot = lista.reduce((s,g)=>s+(g.dimensione||0),0);
+  document.getElementById("conteggio").textContent = `${lista.length} giochi · ${GB(tot)}`;
+}
+function vLibreria(){ setTimeout(aggiornaGriglia); return barraFiltri()+`<div id="zona"></div>`; }
+function vRecenti(){
+  setTimeout(aggiornaGriglia);
+  return `<p class="tenue">Giochi delle cartelle “recenti” (H:\\Games\\__ins), dal più nuovo in base al numero d'ordine.</p>`+barraFiltri()+`<div id="zona"></div>`;
+}
+
+function vInstaller(){
+  setTimeout(aggiornaGriglia);
+  const inst = D.giochi.filter(isInst);
+  const daRaggruppare = inst.filter(g=>!nelGruppo(g));
+  const perDisco = {};
+  inst.forEach(g => { const d = perDisco[g.disco] ||= {n:0, b:0}; d.n++; d.b += g.dimensione||0; });
+  return `<div class="blocco">
+    <b>${inst.length} installer e archivi</b> · ${GB(inst.reduce((s,g)=>s+(g.dimensione||0),0))}
+    · <span class="ok">🟩 ${inst.filter(g=>statoInst(g)==="match").length} con gioco installato</span>
+    · <span class="warn">🟨 ${inst.filter(g=>statoInst(g)==="forse").length} forse (nome simile)</span>
+    · <span style="color:#7aa5ff">🟦 ${inst.filter(g=>statoInst(g)==="nomatch").length} non installati</span>
+    <span class="tenue"> · ${Object.entries(perDisco).sort().map(([d,x])=>`${d} ${x.n} (${GB(x.b)})`).join(" · ")}</span>
+    <div class="riga">
+      ${daRaggruppare.length
+        ? `<button class="b p" onclick="raggruppaInstaller()">📦 Raggruppa ${daRaggruppare.length} nelle cartelle _Installer</button>
+           <span class="tenue">Ogni installer va nella sottocartella <code>_Installer</code> accanto a dov'è ora (es. <code>Y:\\Games\\_Installer</code>, <code>H:\\Games\\__ins\\_Installer</code>). Stesso disco: istantaneo e annullabile.</span>`
+        : `<span class="ok">✔ Tutti gli installer sono già raggruppati nelle cartelle _Installer.</span>`}
+    </div>
+    <div class="riga"><button class="b k" onclick="eliminaInBlocco()">🗑 Elimina in blocco gli installer 🟩 verdi / 🟨 gialli</button>
+      <span class="tenue">Solo installer e archivi di giochi già installati: i giochi installati non vengono toccati.</span></div>
+    </div>` + barraFiltri() + `<div id="zona"></div>`;
+}
+function eliminaInBlocco(){
+  const verdi = D.giochi.filter(g => isInst(g) && statoInst(g)==="match");
+  const gialli = D.giochi.filter(g => isInst(g) && statoInst(g)==="forse");
+  const tot = l => GB(l.reduce((s,g)=>s+(g.dimensione||0),0));
+  const riga = (g, classe) => {
+    const rif = classe==="match" ? installatoDi(g) : similiDi(g);
+    return `<tr><td><input type="checkbox" class="eb eb-${classe}" value="${g.id}" checked onchange="aggiornaTotaleBlocco()"></td>
+      <td>${esc(g.nome_cartella)}<div class="percorso">${esc(g.percorso)}</div></td>
+      <td>${GB(g.dimensione)}</td>
+      <td class="${classe==="match"?"ok":"warn"}">${classe==="match"?"✔ installato:":"? simile a:"} ${esc(rif[0]?.nome||"")}<div class="percorso">${esc(rif[0]?.percorso||"")}</div></td></tr>`;
+  };
+  modale(`<h2 style="margin-top:0">Elimina installer in blocco</h2>
+    <p class="tenue">Vengono eliminati solo gli <b>installer/archivi</b> spuntati. I giochi installati restano dove sono.</p>
+    <div class="riga">
+      <label><input type="checkbox" checked onchange="document.querySelectorAll('.eb-match').forEach(c=>c.checked=this.checked);aggiornaTotaleBlocco()"> <span class="ok">🟩 Verdi: ${verdi.length} (${tot(verdi)})</span></label>
+      <label><input type="checkbox" checked onchange="document.querySelectorAll('.eb-forse').forEach(c=>c.checked=this.checked);aggiornaTotaleBlocco()"> <span class="warn">🟨 Gialli: ${gialli.length} (${tot(gialli)})</span></label>
+    </div>
+    <div style="max-height:45vh;overflow:auto;border:1px solid var(--bordo);border-radius:8px">
+      <table>${verdi.map(g=>riga(g,"match")).join("")}${gialli.length?`<tr><th colspan="4" class="warn">🟨 Gialli: controlla che il gioco simile sia davvero lo stesso</th></tr>`:""}${gialli.map(g=>riga(g,"forse")).join("")}</table>
+    </div>
+    <p id="totBlocco"></p>
+    <div class="riga" style="justify-content:flex-end">
+      <button class="b" onclick="chiudiModale()">Annulla</button>
+      <button class="b" onclick="procediBlocco('da_parte')">🗑 Metti da parte (recuperabile)</button>
+      <button class="b k" onclick="procediBlocco('elimina')">❌ Elimina definitivamente…</button>
+    </div>`);
+  aggiornaTotaleBlocco();
+}
+function aggiornaTotaleBlocco(){
+  const ids = [...document.querySelectorAll(".eb:checked")].map(c=>c.value);
+  const b = ids.reduce((s,id)=>s+(PER_ID[id].dimensione||0),0);
+  document.getElementById("totBlocco").innerHTML = `Selezionati: <b>${ids.length}</b> · spazio liberato: <b>${GB(b)}</b>`;
+}
+function procediBlocco(tipo){
+  const ids = [...document.querySelectorAll(".eb:checked")].map(c=>c.value);
+  if (!ids.length) return toast("Nessun installer selezionato");
+  conferma(ids.map(id=>({id, tipo})), tipo==="elimina" ? "eliminazione installer in blocco" : "installer messi da parte");
+}
+function raggruppaInstaller(){
+  const ops = D.giochi.filter(g => isInst(g) && !nelGruppo(g) && !g.steam).map(g => {
+    const cartella = g.percorso.slice(0, g.percorso.lastIndexOf("\\")) + "\\_Installer";
+    return {id:g.id, tipo:"sposta", cartella};
+  });
+  conferma(ops, "raggruppa installer");
+}
+
+// ------------------------------------------------------------ azioni gioco
+async function gioca(id, exe){const r = await api("/api/avvia/"+id, exe?{exe}:{}); toast(r.messaggio||"Avvio…")}
+async function apri(id){await api("/api/apri/"+id, {})}
+
+function nomePulito(g, conVersione=true){
+  let n = g.nome + (conVersione && g.versione ? ` v${g.versione}` : "");
+  if (g.ordine != null) n = String(g.ordine).padStart(4,"0") + "_" + n;  // mantiene la tua numerazione
+  return n.replace(/[<>:"/\\|?*]/g,"");
+}
+
+function dettaglio(id){
+  const g = PER_ID[id];
+  const copie = D.doppioni.find(d => d.copie.includes(id));
+  const altreFonti = D.fonti.filter(f => !g.percorso.toLowerCase().startsWith(f.toLowerCase()+"\\"));
+  modale(`
+    <div style="display:flex;gap:14px;flex-wrap:wrap">
+      <div style="width:260px">${copertina(g)}</div>
+      <div style="flex:1;min-width:240px">
+        <h2 style="margin:0 0 6px">${esc(g.nome)}</h2>
+        <div class="percorso">${esc(g.percorso)}</div>
+        <div class="meta" style="margin-top:8px">
+          <span class="t">${GB(g.dimensione)}</span>${g.versione?`<span class="t">v${esc(g.versione)}</span>`:""}
+          <span class="t">${esc(g.tipo)}</span>${(g.tag||[]).map(t=>`<span class="t">${esc(t)}</span>`).join("")}
+        </div>
+        ${g.errore?`<p class="warn">⚠ ${esc(g.errore)}</p>`:""}
+        ${copie?`<p class="warn">⚠ Questo gioco ha ${copie.copie.length} copie: guarda in “Doppioni”.</p>`:""}
+      </div>
+    </div>
+    <div class="riga" style="margin-top:14px">
+      <button class="b p" ${(g.steam||g.exe)?"":"disabled"} onclick="gioca('${id}')">▶ Gioca</button>
+      <button class="b" onclick="apri('${id}')">📁 Apri cartella</button>
+    </div>
+    ${!g.steam && g.exes && g.exes.length ? `
+      <h3>Eseguibile</h3>
+      <div class="riga"><select id="selExe" style="flex:1;min-width:0">
+        ${g.exes.map(e=>`<option value="${esc(e)}" ${e===g.exe?"selected":""}>${esc(e.slice(g.percorso.length+1))}</option>`).join("")}
+      </select><button class="b" onclick="scegliExe('${id}')">Usa questo</button></div>
+      <p class="tenue" style="margin:0">Se “Gioca” apre il programma sbagliato, scegli qui quello giusto.</p>` : ""}
+    ${g.steam ? `<p class="tenue">Gioco gestito da Steam: per spostarlo usa Steam (tasto destro sul gioco → Proprietà → File installati → Sposta cartella d'installazione).</p>
+      <div class="riga"><button class="b k" onclick="disinstallaSteam('${id}')">❌ Disinstalla con Steam</button></div>` : `
+      <h3>Riordina</h3>
+      <div class="riga"><input id="nuovoNome" value="${esc(nomePulito(g))}" style="flex:1;min-width:200px"><button class="b" onclick="opSingola('${id}','rinomina')">Rinomina</button></div>
+      <div class="riga"><select id="destSposta" style="flex:1;min-width:200px">${altreFonti.map(f=>`<option>${esc(f)}</option>`).join("")}</select><button class="b" onclick="opSingola('${id}','sposta')">Sposta</button></div>
+      <div class="riga"><button class="b k" onclick="opSingola('${id}','da_parte')">🗑 Metti da parte (in _DaEliminare)</button>
+        <button class="b k" onclick="opSingola('${id}','elimina')">❌ Elimina definitivamente</button></div>`}
+    <div class="riga" style="justify-content:flex-end"><button class="b" onclick="chiudiModale()">Chiudi</button></div>`);
+}
+async function scegliExe(id){
+  await api("/api/scegli_exe/"+id, {exe:document.getElementById("selExe").value});
+  toast("Eseguibile salvato"); await carica(); dettaglio(id);
+}
+function opSingola(id, tipo){
+  const op = {id, tipo};
+  if (tipo==="rinomina") op.nuovo_nome = document.getElementById("nuovoNome").value;
+  if (tipo==="sposta") op.cartella = document.getElementById("destSposta").value;
+  conferma([op], {rinomina:"rinomina",sposta:"spostamento",da_parte:"messa da parte",elimina:"eliminazione"}[tipo]);
+}
+function eliminaDaCard(id){
+  if (PER_ID[id].steam) return disinstallaSteam(id);
+  conferma([{id, tipo:"elimina"}], "eliminazione di " + PER_ID[id].nome);
+}
+async function disinstallaSteam(id){const r = await api("/api/disinstalla_steam/"+id, {}); toast(r.messaggio)}
+
+// ------------------------------------------------------------ anteprima + esecuzione
+async function conferma(ops, etichetta){
+  const ant = await api("/api/anteprima", {ops});
+  const valide = ant.filter(o=>!o.problema);
+  const TIPI = {rinomina:"Rinomina", sposta:"Sposta", da_parte:"Metti da parte", elimina:"❌ Elimina"};
+  const elimina = valide.some(o=>o.tipo==="elimina");
+  const totElim = valide.filter(o=>o.tipo==="elimina").reduce((s,o)=>s+(o.dimensione||0),0);
+  modale(`<h2 style="margin-top:0">Anteprima: ${esc(etichetta)}</h2>
+    <p>${valide.length} operazioni pronte${ant.length-valide.length?`, <span class="ko">${ant.length-valide.length} con problemi (verranno saltate)</span>`:""}.</p>
+    <table><tr><th></th><th>Gioco</th><th>Da → A</th></tr>
+    ${ant.slice(0,300).map(o=>`<tr><td>${o.problema?"❌":o.avviso?"⚠️":"✅"}</td>
+      <td>${TIPI[o.tipo]}<br><b>${esc(o.nome||"")}</b></td>
+      <td><div class="percorso">${esc(o.da||"")}</div><div class="percorso">→ ${esc(o.a||"")}</div>
+      ${o.problema?`<div class="ko">${esc(o.problema)}</div>`:""}${o.avviso?`<div class="warn">${esc(o.avviso)}</div>`:""}</td></tr>`).join("")}
+    </table>
+    ${ant.length>300?`<p class="tenue">…e altre ${ant.length-300}</p>`:""}
+    ${elimina ? `<div class="blocco" style="border-color:var(--ko)">
+        <b class="ko">⚠ Eliminazione definitiva di ${GB(totElim)}: i file non andranno nel Cestino e non si potranno recuperare.</b>
+        <div class="riga">Per confermare scrivi <b>ELIMINA</b>: <input id="confElimina" autocomplete="off" oninput="document.getElementById('btnEsegui').disabled=this.value.trim().toUpperCase()!=='ELIMINA'"></div></div>`
+      : `<p class="tenue">Tutte le operazioni si possono annullare dalla sezione “Riordina”.</p>`}
+    <div class="riga" style="justify-content:flex-end">
+      <button class="b" onclick="chiudiModale()">Annulla</button>
+      <button class="b ${elimina?"k":"p"}" ${valide.length&&!elimina?"":"disabled"} id="btnEsegui">${elimina?"Elimina definitivamente":"Esegui"} ${valide.length} ${valide.length===1?"elemento":"operazioni"}</button>
+    </div>`);
+  document.getElementById("btnEsegui").onclick = async () => {
+    const r = await api("/api/esegui", {ops:valide.map(({id,tipo,nuovo_nome,cartella})=>({id,tipo,nuovo_nome,cartella})), etichetta});
+    chiudiModale();
+    toast(r.ok ? "Operazioni avviate…" : r.messaggio);
+    controllaStato();
+  };
+}
+
+// ------------------------------------------------------------ doppioni
+function vDoppioni(){
+  if (!D.doppioni.length) return `<div class="vuoto">Nessun doppione trovato 🎉</div>`;
+  const tot = D.doppioni.reduce((s,d)=>s+d.recuperabile,0);
+  return `<div class="blocco"><b>${D.doppioni.length} giochi con più copie</b> · eliminando le copie in più liberi circa <b>${GB(tot)}</b>.<br>
+    <span class="tenue">Per ogni gioco restano la copia migliore da giocare (installata, versione più alta, più recente) e l'archivio più recente come backup. Le altre vengono spostate in <code>_DaEliminare</code> sullo stesso disco: niente viene cancellato.</span>
+    <div class="riga"><button class="b p" onclick="mettiDaParteSelezionati()">🗑 Metti da parte le copie selezionate</button>
+      <button class="b k" onclick="eliminaSelezionati()">❌ Elimina definitivamente le selezionate</button></div></div>
+    ${D.doppioni.map(d=>`<div class="blocco"><b>${esc(d.nome)}</b> <span class="tenue">· recuperabili ${GB(d.recuperabile)}</span>
+      <table>${d.copie.map(id=>{const g=PER_ID[id]; const tieni=id===d.tieni, bk=id===d.backup; return `<tr>
+        <td style="width:30px">${g.steam?"":`<input type="checkbox" class="dp" value="${id}" ${tieni||bk?"":"checked"}>`}</td>
+        <td>${tieni?'<span class="ok">✔ da tenere</span>':""}${bk?'<span class="ok">✔ backup</span>':""} ${esc(g.nome_cartella)}<div class="percorso">${esc(g.percorso)}</div></td>
+        <td>${GB(g.dimensione)}</td><td>${g.versione?"v"+esc(g.versione):""}</td><td>${esc(g.tipo)}${g.steam?" · Steam":""}${g.recente?" · recente":""}</td>
+        <td><button class="b" onclick="apri('${id}')">📁</button></td></tr>`}).join("")}</table></div>`).join("")}`;
+}
+function mettiDaParteSelezionati(){
+  const ids = [...document.querySelectorAll(".dp:checked")].map(c=>c.value);
+  if (!ids.length) return toast("Nessuna copia selezionata");
+  conferma(ids.map(id=>({id, tipo:"da_parte"})), "doppioni");
+}
+function eliminaSelezionati(){
+  const ids = [...document.querySelectorAll(".dp:checked")].map(c=>c.value);
+  if (!ids.length) return toast("Nessuna copia selezionata");
+  conferma(ids.map(id=>({id, tipo:"elimina"})), "eliminazione doppioni");
+}
+async function svuota(percorso, n){
+  const s = prompt(`Eliminare DEFINITIVAMENTE i ${n} elementi in ${percorso}?\nNon si potranno recuperare.\n\nScrivi ELIMINA per confermare:`);
+  if ((s||"").trim().toUpperCase() !== "ELIMINA") return toast("Annullato");
+  const r = await api("/api/svuota", {percorso}); toast(r.ok ? "Svuotamento in corso…" : r.messaggio); controllaStato();
+}
+
+// ------------------------------------------------------------ spazio
+function vSpazio(){
+  const grandi = [...D.giochi].sort((a,b)=>(b.dimensione||0)-(a.dimensione||0)).slice(0,25);
+  return `<div class="blocco"><h3 style="margin-top:0">Dischi</h3>
+    <p class="tenue"><span style="color:var(--acc)">■</span> giochi &nbsp; <span style="color:#6b7287">■</span> altro &nbsp; <span style="color:var(--pan2)">■</span> libero</p>
+    <table>${D.dischi.map(d=>{const t=d.totale||1, altro=Math.max(0,t-d.libero-d.occupato); return `<tr>
+      <td style="width:150px"><b>${d.disco}</b> <span class="t" title="${esc(d.modello||"")}">${"⚡".repeat(d.livello||0)} ${esc(d.tipo||"")}</span></td>
+      <td><div class="barra"><div style="width:${d.occupato/t*100}%;background:var(--acc)"></div><div style="width:${altro/t*100}%;background:#6b7287"></div></div></td>
+      <td style="width:330px">${d.giochi} giochi · ${GB(d.occupato)} · libero <b>${GB(d.libero)}</b> su ${GB(d.totale)}</td></tr>`}).join("")}</table></div>
+    ${D.cestini.length?`<div class="blocco"><h3 style="margin-top:0">Cartelle _DaEliminare</h3>
+      <p class="tenue">Contengono i giochi messi da parte. Quando sei sicuro, svuotale per liberare davvero lo spazio.</p>
+      ${D.cestini.map(c=>`<div class="riga"><span class="percorso">${esc(c.percorso)}</span> <span>${c.elementi} elementi</span>
+        <button class="b" onclick='api("/api/apri_percorso",{percorso:${JSON.stringify(c.percorso)}})'>Apri</button>
+        <button class="b k" onclick='svuota(${JSON.stringify(c.percorso)}, ${c.elementi})'>❌ Svuota</button></div>`).join("")}</div>`:""}
+    <div class="blocco"><h3 style="margin-top:0">I 25 giochi più grandi</h3>
+    <table>${grandi.map(g=>`<tr style="cursor:pointer" onclick="dettaglio('${g.id}')"><td>${esc(g.nome)}</td><td>${g.disco}</td><td>${GB(g.dimensione)}</td><td class="tenue">${esc(g.tipo)}${g.steam?" · Steam":""}</td></tr>`).join("")}</table></div>`;
+}
+
+// ------------------------------------------------------------ riordina
+let conVersione = true;
+function proposte(){
+  return D.giochi.filter(g => !g.steam && !/\\(Riot Games|Amazon Games|Epic Games)\\/i.test(g.percorso) && g.tipo!=="archivio" && g.tipo!=="installer"
+    && nomePulito(g, conVersione) !== g.nome_cartella)
+    .sort((a,b)=>a.disco.localeCompare(b.disco)||a.nome.localeCompare(b.nome));
+}
+function vRiordina(){
+  const p = proposte();
+  return `<div class="blocco"><h3 style="margin-top:0">Annulla</h3>
+      <div id="registro" class="tenue">…</div></div>
+    <div class="blocco"><h3 style="margin-top:0">Nomi puliti</h3>
+    <p class="tenue">Rinomina le cartelle con nomi leggibili (es. <code>Cult.of.the.Lamb.v1.2.7.186</code> → <code>Cult of the Lamb v1.2.7.186</code>). La numerazione di __ins (<code>0012_</code>) viene mantenuta. Steam, launcher, installer e archivi sono esclusi.</p>
+    <div class="riga"><label><input type="checkbox" ${conVersione?"checked":""} onchange="conVersione=this.checked;disegna()"> Includi la versione nel nome</label>
+      <button class="b" onclick="document.querySelectorAll('.rn').forEach(c=>c.checked=true)">Seleziona tutti</button>
+      <button class="b" onclick="document.querySelectorAll('.rn').forEach(c=>c.checked=false)">Nessuno</button>
+      <button class="b p" onclick="rinominaSelezionati()">Anteprima rinomina</button></div>
+    ${p.length?`<table><tr><th></th><th>Disco</th><th>Ora</th><th>Diventa</th></tr>${p.map(g=>`<tr>
+      <td><input type="checkbox" class="rn" value="${g.id}"></td><td>${g.disco}</td>
+      <td class="percorso">${esc(g.nome_cartella)}</td><td>${esc(nomePulito(g, conVersione))}</td></tr>`).join("")}</table>`
+      :`<p class="ok">Tutti i nomi sono già puliti.</p>`}</div>`;
+}
+function rinominaSelezionati(){
+  const ids = [...document.querySelectorAll(".rn:checked")].map(c=>c.value);
+  if (!ids.length) return toast("Nessun gioco selezionato");
+  conferma(ids.map(id=>({id, tipo:"rinomina", nuovo_nome:nomePulito(PER_ID[id], conVersione)})), "nomi puliti");
+}
+async function caricaRegistro(){
+  const r = await api("/api/registro");
+  const el = document.getElementById("registro"); if (!el) return;
+  el.innerHTML = r.length ? `<p>Ultima operazione: <b>${esc(r[0].etichetta)}</b> (${r[0].mosse.length} cartelle, ${new Date(r[0].quando*1000).toLocaleString("it-IT")})</p>
+    <button class="b" onclick="annulla()">↶ Annulla ultima operazione</button>
+    ${r.length>1?`<p class="tenue">Prima ancora: ${r.slice(1,6).map(x=>`${esc(x.etichetta)} (${x.mosse.length})`).join(", ")}</p>`:""}`
+    : "Nessuna operazione eseguita finora.";
+}
+async function annulla(){
+  if (!confirm("Rimettere le cartelle com'erano prima dell'ultima operazione?")) return;
+  const r = await api("/api/annulla", {}); toast(r.messaggio); controllaStato();
+}
+
+// ------------------------------------------------------------ impostazioni
+function vImpostazioni(){
+  return `<div class="blocco"><h3 style="margin-top:0">Cartelle dei giochi</h3>
+    <p class="tenue">Una per riga. Ogni sottocartella viene considerata un gioco. Le librerie Steam sono trovate in automatico.</p>
+    <textarea id="fonti" rows="12" style="width:100%;font-family:Consolas,monospace">${esc(D.fonti.join("\n"))}</textarea>
+    <div class="riga"><button class="b p" onclick="salvaFonti()">Salva e aggiorna</button>
+    <button class="b" onclick="scansiona(true)">Ricalcola tutto da zero</button></div>
+    <p class="tenue">Le sottocartelle-contenitore (come __ins o INS) e le cartelle “recenti” si impostano in <code>config.json</code>.</p></div>
+    <div class="blocco"><h3 style="margin-top:0">Info</h3><p class="tenue">Ultimo aggiornamento: ${D.aggiornato?new Date(D.aggiornato*1000).toLocaleString("it-IT"):"in corso / mai"}</p></div>`;
+}
+async function salvaFonti(){
+  await api("/api/fonti", {fonti:document.getElementById("fonti").value.split("\n")});
+  toast("Salvato"); scansiona(false);
+}
+
+// ------------------------------------------------------------ stato e scansione
+async function scansiona(completa){await api("/api/scansiona",{completa}); controllaStato()}
+let polling = null, eraOccupato = false;
+async function controllaStato(){
+  const s = await api("/api/stato");
+  const sc = s.scansione, op = s.operazioni;
+  const p = document.getElementById("progresso");
+  const occupato = sc.in_corso || op.in_corso;
+  document.getElementById("btnScan").disabled = sc.in_corso;
+  if (sc.in_corso) {
+    const perc = sc.totale ? sc.fatti/sc.totale*100 : 0;
+    p.innerHTML = `${esc(sc.fase)} ${sc.fatti}/${sc.totale}<div class="barra"><div style="width:${perc}%;background:var(--acc)"></div></div>`;
+    p.title = sc.corrente;
+  } else if (op.in_corso) {
+    const perc = op.totale ? op.fatti/op.totale*100 : 0;
+    p.innerHTML = `Operazioni ${op.fatti}/${op.totale}<div class="barra"><div style="width:${perc}%;background:var(--ok)"></div></div>`;
+    p.title = op.corrente;
+  } else p.innerHTML = "";
+  if (eraOccupato && !occupato) {
+    const errori = (op.esito||[]).filter(e=>!e.ok);
+    if (errori.length) modale(`<h3>Alcune operazioni non sono riuscite</h3>${errori.map(e=>`<p><b>${esc(e.nome)}</b>: <span class="ko">${esc(e.errore)}</span></p>`).join("")}<button class="b" onclick="chiudiModale()">OK</button>`);
+    await carica();
+  } else if (occupato && sc.in_corso && Date.now() - (window._ultimoRicarico||0) > 15000) {
+    window._ultimoRicarico = Date.now(); await carica();  // la libreria si riempie mentre scansiona
+  }
+  eraOccupato = occupato;
+  clearTimeout(polling);
+  polling = setTimeout(controllaStato, occupato ? 1200 : 5000);
+}
+async function esci(){ if (confirm("Chiudere il Gestore giochi?")) { await api("/api/esci",{}); document.body.innerHTML='<div class="vuoto">App chiusa. Puoi chiudere questa scheda.</div>'; } }
+
+carica().then(controllaStato);
+</script>
+</body>
+</html>
