@@ -300,6 +300,43 @@ def api_fonti():
     return jsonify(ok=True)
 
 
+# ---------------------------------------------------------------- avvio automatico con Windows
+
+def collegamento_avvio():
+    return Path(os.environ["APPDATA"]) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup" / "Gestore Giochi.lnk"
+
+
+def imposta_avvio_automatico(attivo):
+    lnk = collegamento_avvio()
+    if not attivo:
+        lnk.unlink(missing_ok=True)
+        return
+    pythonw = Path(sys.executable).with_name("pythonw.exe")
+    ps = (
+        "$s = (New-Object -ComObject WScript.Shell).CreateShortcut($env:LNK);"
+        "$s.TargetPath = $env:PYW; $s.Arguments = '\"' + $env:APP + '\" --avvio';"
+        "$s.WorkingDirectory = $env:DIR; $s.Description = 'Gestore Giochi';"
+        "$s.IconLocation = \"$env:SystemRoot\\System32\\imageres.dll,186\"; $s.Save()"
+    )
+    env = dict(os.environ, LNK=str(lnk), PYW=str(pythonw), APP=str(BASE / "app.py"), DIR=str(BASE))
+    subprocess.run(["powershell", "-NoProfile", "-Command", ps], env=env, check=True, timeout=30,
+                   creationflags=subprocess.CREATE_NO_WINDOW)
+
+
+@app.get("/api/avvio_automatico")
+def api_avvio_get():
+    return jsonify(attivo=collegamento_avvio().exists())
+
+
+@app.post("/api/avvio_automatico")
+def api_avvio_set():
+    try:
+        imposta_avvio_automatico(bool(request.json["attivo"]))
+    except Exception as e:
+        return jsonify(ok=False, attivo=collegamento_avvio().exists(), messaggio=str(e)), 500
+    return jsonify(ok=True, attivo=collegamento_avvio().exists())
+
+
 @app.post("/api/esci")
 def api_esci():
     threading.Timer(0.5, lambda: os._exit(0)).start()

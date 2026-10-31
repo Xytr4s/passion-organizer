@@ -493,8 +493,23 @@ async function annulla(){
 }
 
 // ------------------------------------------------------------ impostazioni
+async function caricaAvvioAuto(){
+  const r = await api("/api/avvio_automatico");
+  const c = document.getElementById("chkAvvio"); if (c) { c.checked = r.attivo; c.disabled = false; }
+}
+async function cambiaAvvioAuto(attivo){
+  const c = document.getElementById("chkAvvio"); c.disabled = true;
+  const r = await api("/api/avvio_automatico", {attivo});
+  c.checked = r.attivo; c.disabled = false;
+  toast(r.ok ? (r.attivo ? "Si aprirà all'avvio di Windows" : "Avvio automatico disattivato") : "Errore: " + r.messaggio);
+}
 function vImpostazioni(){
-  return `<div class="blocco"><h3 style="margin-top:0">Cartelle dei giochi</h3>
+  setTimeout(caricaAvvioAuto);
+  return `<div class="blocco"><h3 style="margin-top:0">Avvio</h3>
+    <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
+      <input type="checkbox" id="chkAvvio" disabled onchange="cambiaAvvioAuto(this.checked)"> Apri il Gestore Giochi all'avvio di Windows</label>
+    <p class="tenue" style="margin-bottom:0">All'avvio aggiorna anche la libreria in automatico (dopo circa 20 secondi).</p></div>
+    <div class="blocco"><h3 style="margin-top:0">Cartelle dei giochi</h3>
     <p class="tenue">Una per riga. Ogni sottocartella viene considerata un gioco. Le librerie Steam sono trovate in automatico.</p>
     <textarea id="fonti" rows="12" style="width:100%;font-family:Consolas,monospace">${esc(D.fonti.join("\n"))}</textarea>
     <div class="riga"><button class="b p" onclick="salvaFonti()">Salva e aggiorna</button>
