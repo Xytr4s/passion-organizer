@@ -1,56 +1,65 @@
-# 🎮 Gestore Giochi
+# 🎮 Gestore Giochi (Game Manager)
 
-App per Windows che riunisce in un'unica libreria tutti i giochi sparsi su più dischi
-(cartelle normali, Steam, Amazon, Riot…) e aiuta a tenerli in ordine.
+🇬🇧 **English** · 🇮🇹 [Italiano](README.it.md)
 
-## Funzioni
+A Windows app that gathers every game scattered across multiple drives (plain folders, Steam, Amazon, Riot…) into a single library and helps you keep it tidy.
 
-| Sezione | Cosa fa |
+📖 **Full guide in the [wiki](https://github.com/Xytr4s/gestore-giochi/wiki).**
+
+## Features
+
+| Section | What it does |
 |---|---|
-| **Libreria** | Tutti i giochi installati, con nome pulito, disco, dimensione, versione e copertina. ▶ Gioca, 📁 Apri cartella, 🗑 Elimina. Cornice 🟩/🟨/🟦 se esiste un installer di backup. |
-| **Recenti** | I giochi della cartella "recenti" (es. `H:\Games\__ins`), ordinati per numero `0001_…`. |
-| **Installer** | Installer e archivi (rar/zip/iso/setup). Cornice 🟩 gioco installato, 🟨 nome simile, 🟦 non installato. Raggruppamento in cartelle `_Installer` ed eliminazione in blocco. |
-| **Doppioni** | Copie multiple dello stesso gioco: tiene la migliore (installata, nei recenti, disco più veloce, versione più alta) + l'archivio più recente come backup. |
-| **Spazio** | Occupazione per disco con tipo e velocità (NVMe / SSD / HDD / USB), giochi più grandi, cartelle `_DaEliminare`. |
-| **Riordina** | Rinomina in blocco con nomi puliti (mantiene la numerazione `0001_`), annulla ultima operazione. |
+| **Library** | Every installed game with clean name, drive, size, version and cover art. ▶ Play, 📁 Open folder, 🗑 Delete. 🟩/🟨/🟦 frame if a backup installer exists. |
+| **Recent** | Games from your "recent" folder (e.g. `H:\Games\__ins`), sorted by their `0001_…` number. |
+| **Installers** | Installers and archives (rar/zip/iso/setup). Frame 🟩 game installed, 🟨 similar name, 🟦 not installed. Grouping into `_Installer` folders and bulk deletion. |
+| **Duplicates** | Multiple copies of the same game: keeps the best one (installed, in recent, fastest drive, highest version) + the most recent archive as a backup. |
+| **Space** | Usage per drive with type and speed (NVMe / SSD / HDD / USB), largest games, `_DaEliminare` folders. |
+| **Tidy up** | Bulk renaming to clean names (keeps the `0001_` numbering), undo last operation. |
 
-## Sicurezza
+## Language
 
-- Ogni operazione mostra prima un'**anteprima**.
-- Rinomina / sposta / "metti da parte" sono **annullabili** (`registro.json`).
-- "Metti da parte" sposta in `X:\_DaEliminare` sullo stesso disco (istantaneo).
-- L'eliminazione definitiva richiede di scrivere **ELIMINA** ed è annotata in `eliminati.json`.
-- I giochi **Steam** non vengono mai spostati né cancellati dall'app (si usa Steam).
-- Radici dei dischi, cartelle principali dei giochi, `_Installer` e `_DaEliminare` sono protette.
+The interface is available in **Italian** and **English**: choose it in *Settings → Language*.
 
-## Installazione
+## Safety
+
+- Every operation shows a **preview** first.
+- Rename / move / "set aside" can be **undone** (`registro.json`).
+- "Set aside" moves to `X:\_DaEliminare` on the same drive (instant).
+- Permanent deletion requires typing **ELIMINA** and is logged in `eliminati.json`.
+- **Steam** games are never moved or deleted by the app (use Steam).
+- Drive roots, main game folders, `_Installer` and `_DaEliminare` are protected.
+
+## Installation
 
 ```
 pip install -r requirements.txt
-pythonw app.py            # finestra propria
-python app.py --browser   # nel browser, su http://127.0.0.1:5577
+pythonw app.py            # its own window
+python app.py --browser   # in the browser, at http://127.0.0.1:5577
 ```
 
-All'avvio con `--avvio` (usato dall'esecuzione automatica di Windows) aggiorna la libreria dopo 20 s.
+Launched with `--avvio` (used by start-with-Windows) it refreshes the library after 20 s.
 
-## Configurazione
+## Configuration
 
-`config.json` viene creato al primo avvio:
+`config.json` is created on first launch:
 
-- `fonti`: cartelle i cui sottoelementi sono giochi
-- `contenitori`: sottocartelle che contengono giochi (es. `__ins`, `INS`)
-- `recenti`: contenitori dei giochi più recenti
-- `exe_scelti`: eseguibile scelto a mano per un gioco
+- `fonti`: folders whose sub-items are games
+- `contenitori`: subfolders that contain games (e.g. `__ins`, `INS`)
+- `recenti`: containers holding the most recent games
+- `exe_scelti`: executable picked by hand for a game
+- `lingua`: interface language (`it` / `en`)
 
-Le librerie Steam vengono lette da `libraryfolders.vdf`.
+Steam libraries are read from `libraryfolders.vdf`.
 
-## Struttura
+## Structure
 
-| File | Ruolo |
+| File | Role |
 |---|---|
-| `app.py` | Server Flask + finestra pywebview, API, avvio giochi, copertine, velocità dischi |
-| `scanner.py` | Scansione dischi, pulizia nomi, versioni, eseguibile principale, Steam, doppioni |
-| `operazioni.py` | Anteprima / esecuzione / annullamento di rinomina, spostamento, eliminazione |
-| `static/index.html` | Interfaccia (HTML + JS, nessuna dipendenza) |
+| `app.py` | Flask server + pywebview window, API, game launching, cover art, drive speed |
+| `scanner.py` | Drive scanning, name cleaning, versions, main executable, Steam, duplicates |
+| `operazioni.py` | Preview / run / undo of rename, move, delete |
+| `static/index.html` | Interface (HTML + JS, no dependencies) |
+| `static/i18n.js` | Interface translations (Italian, English) |
 
-File di dati locali (non nel repo): `dati.json`, `copertine.json`, `registro.json`, `eliminati.json`, `config.json`, `app.log`.
+Local data files (not in the repo): `dati.json`, `copertine.json`, `registro.json`, `eliminati.json`, `config.json`, `app.log`.

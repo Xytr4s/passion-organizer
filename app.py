@@ -192,7 +192,19 @@ def api_libreria():
         "doppioni": scanner.doppioni(dati["giochi"], VELOCITA),
         "cestini": operazioni.contenuto_cestini(sorted(dischi)),
         "fonti": scanner.carica_config()["fonti"],
+        "lingua": scanner.carica_config().get("lingua", "it"),
     })
+
+
+@app.post("/api/lingua")
+def api_lingua():
+    lingua = request.json.get("lingua", "it")
+    if lingua not in ("it", "en"):
+        return jsonify(ok=False), 400
+    cfg = scanner.carica_config()
+    cfg["lingua"] = lingua
+    scanner.salva_config(cfg)
+    return jsonify(ok=True)
 
 
 @app.get("/api/stato")
