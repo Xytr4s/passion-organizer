@@ -9,15 +9,25 @@ const STAGIONE_EP = /\b(?:S\d{1,2}\s*[:.\-_]?\s*E\d{1,4}|(?:season|stagione|st)\
 
 // Siti come Prime Video lasciano nel titolo della scheda solo la serie: l'episodio è scritto nella barra
 // del player. Si cerca una scritta breve con stagione ed episodio e, accanto, il nome della serie.
-function scrittaPlayer() {
+function scrittaPlayerOra() {
   for (const el of document.querySelectorAll('[class*="title"],[class*="subtitle"],[class*="episode"],[class*="Title"]')) {
-    const testo = (el.innerText || "").trim();
+    const testo = (el.innerText || el.textContent || "").trim();
     if (!testo || testo.length > 150 || !STAGIONE_EP.test(testo)) continue;
-    const insieme = (el.parentElement?.innerText || "").trim().replace(/\s*\n+\s*/g, " ");
+    const insieme = (el.parentElement?.innerText || el.parentElement?.textContent || "").trim().replace(/\s*\n+\s*/g, " ");
     return insieme.length <= 200 && insieme.length > testo.length ? insieme : testo;
   }
   return null;
 }
+
+// La barra del player sparisce (e la scritta viene tolta dalla pagina) quando il mouse è fermo:
+// si ricorda l'ultima scritta vista, controllando ogni 4 secondi.
+let ultimaScrittaPlayer = null;
+function scrittaPlayer() {
+  const ora = scrittaPlayerOra();
+  if (ora) ultimaScrittaPlayer = ora;
+  return ora || ultimaScrittaPlayer;
+}
+setInterval(scrittaPlayer, 4000);
 
 // Molti siti non scrivono l'episodio nel titolo della scheda: lo si trova nel pulsante dell'episodio
 // evidenziato (classe "active", "current", "selected"…) dentro l'elenco degli episodi.
