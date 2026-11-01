@@ -29,8 +29,8 @@ library and keeps it tidy — and tracks the **TV series, movies and anime** you
 | **Tidy up** | Bulk renaming to clean names (keeps your `0001_` / `x0001 ` / `L0001 ` prefixes), undo last operation. |
 
 **Frames** tell you two things at once: the **color** says whether an installer/backup exists (🟩 yes · 🟨 maybe · 🟦 no),
-the **shape** is your rating: 👍 good = thick wavy, 👌 okay = wavy, 👎 bad = sawtooth. Initial ratings come from the folder
-prefixes in `__ins` (`x0235 …` = good, `L0236 …` = bad).
+the **shape** is your rating: 👍 good = thick wavy, 👌 okay = wavy, 👎 bad = red sawtooth. Initial ratings come from the folder
+prefixes in `__ins` (`x0235 …` = good, `L0236 …` = bad); **⭐ Rate unrated games** shows one game at a time (keys 1/2/3).
 
 ## TV series, movies and anime
 
@@ -39,6 +39,10 @@ prefixes in `__ins` (`x0235 …` = good, `L0236 …` = bad).
   working when a site changes domain) it marks the episode or movie you watched after N minutes, or asks first.
   Unknown titles land in **To confirm**.
 - **Phone**: a private page backed by your own Google Sheet (Apps Script, free). The app syncs every 5 minutes and after every change.
+- **Anime seasons**: 📅 **Season** shows a MyAnimeList season sorted by MAL score (with legal streaming platforms) and lets you pick
+  ▶ Watch / 📌 Plan / ✕ Not interested; 🏆 **Archive** browses every season downloaded in the background (from 2020, then back to 1917),
+  plus the next 4 upcoming seasons.
+- **Import from AnimeUnity**: reads a public AnimeUnity profile list (statuses, watched episodes, ratings, favorites).
 
 ## Safety
 

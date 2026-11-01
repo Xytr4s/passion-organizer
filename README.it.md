@@ -29,8 +29,8 @@ in ordine — e tiene traccia di **serie TV, film e anime** che guardi, con un'e
 | **Riordina** | Rinomina in blocco con nomi puliti (conserva i prefissi `0001_` / `x0001 ` / `L0001 `), annulla ultima operazione. |
 
 Le **cornici** dicono due cose insieme: il **colore** indica se c'è un installer di backup (🟩 sì · 🟨 forse · 🟦 no),
-la **forma** è il tuo voto: 👍 bello = ondulata spessa, 👌 sufficiente = ondulata, 👎 brutto = dente di sega. I voti iniziali vengono
-dai prefissi delle cartelle in `__ins` (`x0235 …` = bello, `L0236 …` = brutto).
+la **forma** è il tuo voto: 👍 bello = ondulata spessa, 👌 sufficiente = ondulata, 👎 brutto = dente di sega rosso. I voti iniziali vengono
+dai prefissi delle cartelle in `__ins` (`x0235 …` = bello, `L0236 …` = brutto); **⭐ Vota i giochi senza voto** mostra un gioco alla volta (tasti 1/2/3).
 
 ## Serie TV, film e anime
 
@@ -39,6 +39,10 @@ dai prefissi delle cartelle in `__ins` (`x0235 …` = bello, `L0236 …` = brutt
   anche quando cambiano dominio) segna l'episodio o il film guardato dopo N minuti, o chiede prima. I titoli sconosciuti finiscono
   in **Da confermare**.
 - **Telefono**: pagina privata collegata a un tuo Foglio Google (Apps Script, gratis). Il Gestore si sincronizza ogni 5 minuti e dopo ogni modifica.
+- **Stagioni anime**: 📅 **Stagione** mostra una stagione di MyAnimeList ordinata per voto MAL (con le piattaforme legali) e permette
+  ▶ Guardo / 📌 Pianifico / ✕ Non mi interessa; 🏆 **Archivio** raccoglie tutte le stagioni scaricate in background (dal 2020, poi a ritroso
+  fino al 1917), più le 4 stagioni in arrivo.
+- **Importazione da AnimeUnity**: legge la lista di un profilo pubblico (stati, episodi visti, voti, preferiti).
 
 ## Sicurezza
 
