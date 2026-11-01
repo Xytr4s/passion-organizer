@@ -22,6 +22,19 @@ button.p{background:var(--acc);border-color:var(--acc);color:#fff}
 button.k{border-color:var(--ko);color:var(--ko)}
 button:disabled{opacity:.5;cursor:default}
 main{padding:16px 18px 60px}
+#corpo{display:flex;align-items:flex-start}
+#lato{position:sticky;top:57px;height:calc(100vh - 57px);width:92px;flex:0 0 92px;background:var(--pan);border-right:1px solid var(--bordo);
+  display:flex;flex-direction:column;gap:6px;padding:12px 8px;box-sizing:border-box}
+#contenuto{flex:1;min-width:0}
+#nav{padding:10px 18px 0}
+#nav:empty{display:none}
+.sez{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px;border-radius:10px;border:0;
+  background:none;color:var(--tenue);cursor:pointer;font:inherit;font-size:12px}
+.sez .ic{font-size:26px;line-height:1}
+.sez:hover{background:var(--pan2);color:var(--testo)}
+.sez.attivo{background:var(--pan2);color:var(--testo);box-shadow:inset 3px 0 0 var(--acc)}
+.sez .badge-n{position:absolute;top:4px;right:6px;margin:0}
+.sez.fondo{margin-top:auto}
 .filtri{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
 .tenue{color:var(--tenue)}
 .griglia{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
@@ -42,6 +55,7 @@ main{padding:16px 18px 60px}
 .azioni{display:flex;gap:6px;margin-top:auto;padding-top:6px}
 .azioni button{flex:1}
 .azioni button.elim{flex:0 0 auto}
+.azioni button{white-space:nowrap;padding-left:8px;padding-right:8px}
 table{width:100%;border-collapse:collapse}
 td,th{padding:7px 8px;border-bottom:1px solid var(--bordo);text-align:left;vertical-align:top}
 th{color:var(--tenue);font-weight:500;font-size:12px}
@@ -72,13 +86,18 @@ th{color:var(--tenue);font-weight:500;font-size:12px}
 <body>
 <header>
   <h1>🎮 Gestore Giochi</h1>
-  <nav id="nav"></nav>
   <div class="spazio"></div>
   <div id="progresso"></div>
   <button class="b" id="btnScan" onclick="scansiona(false)"></button>
   <button class="b" id="btnEsci" onclick="esci()">⏻</button>
 </header>
-<main id="main"></main>
+<div id="corpo">
+  <aside id="lato"></aside>
+  <div id="contenuto">
+    <nav id="nav"></nav>
+    <main id="main"></main>
+  </div>
+</div>
 <div id="modale" onclick="if(event.target===this)chiudiModale()"><div class="box" id="mbox"></div></div>
 <div id="toast"></div>
 
@@ -122,20 +141,33 @@ function toast(msg){const el=document.getElementById("toast");el.textContent=tS(
 function modale(html){document.getElementById("mbox").innerHTML=html;document.getElementById("modale").style.display="flex"}
 function chiudiModale(){document.getElementById("modale").style.display="none"}
 
-const VISTE = ["libreria","recenti","installer","serie","anime","doppioni","spazio","riordina","impostazioni"];
+const VISTE = ["libreria","recenti","installer","doppioni","spazio","riordina"];        // schede della sezione Giochi
+const SEZIONI = [["giochi","🎮"],["serie","📺"],["film","🎬"],["anime","⛩️"]];
+let sezione = "giochi";
 
 function disegnaNav(){
   document.getElementById("btnScan").textContent = t("aggiorna");
+  document.getElementById("btnScan").style.display = sezione === "giochi" ? "" : "none";
   document.getElementById("btnEsci").title = t("chiudi_app");
   document.documentElement.lang = LINGUA;
-  document.getElementById("nav").innerHTML = VISTE.map(k => {
+  // barra laterale: le quattro sezioni (con quanti titoli sono in corso) + impostazioni in fondo
+  const inCorso = c => M.titoli.filter(x => x.categoria === c && x.stato === "in_corso").length;
+  document.getElementById("lato").innerHTML = SEZIONI.map(([k, ic]) => {
+    const n = k === "giochi" ? 0 : inCorso(k);
+    return `<button class="sez ${sezione===k?"attivo":""}" onclick="vaiSezione('${k}')"><span class="ic">${ic}</span>${t("sez_"+k)}${n?`<span class="badge-n">${n}</span>`:""}</button>`;
+  }).join("") + `<button class="sez fondo ${sezione==="impostazioni"?"attivo":""}" onclick="vaiSezione('impostazioni')"><span class="ic">⚙️</span>${t("sez_impostazioni")}</button>`;
+  // schede in alto: solo nella sezione Giochi
+  document.getElementById("nav").innerHTML = sezione !== "giochi" ? "" : VISTE.map(k => {
     let n = k==="libreria" ? D.giochi.filter(g=>!isInst(g)).length : k==="installer" ? D.giochi.filter(isInst).length
-          : k==="doppioni" ? D.doppioni.length : k==="recenti" ? D.giochi.filter(g=>g.recente).length
-          : (k==="serie"||k==="anime") ? M.titoli.filter(x=>x.categoria===k && x.stato==="in_corso").length : 0;
+          : k==="doppioni" ? D.doppioni.length : k==="recenti" ? D.giochi.filter(g=>g.recente).length : 0;
     return `<button class="${vista===k?"attivo":""}" onclick="vai('${k}')">${t("nav_"+k)}${n?`<span class="badge-n">${n}</span>`:""}</button>`;
   }).join("");
 }
 function vai(k){vista=k;limite=200;F.tipo="";disegna()}
+function vaiSezione(s){sezione=s;limite=200;F.tipo="";FM.stato="";disegna()}
+function ricordaPosizione(){
+  try { history.replaceState(null, "", "#" + (sezione === "giochi" ? "giochi/" + vista : sezione)); } catch(e) {}
+}
 
 async function carica(){
   D = await api("/api/libreria");
@@ -151,9 +183,14 @@ async function carica(){
 
 function disegna(){
   disegnaNav();
+  ricordaPosizione();
   const m = document.getElementById("main");
-  m.innerHTML = {libreria:vLibreria, recenti:vRecenti, installer:vInstaller, serie:vSerie, anime:vAnime, doppioni:vDoppioni, spazio:vSpazio, riordina:vRiordina, impostazioni:vImpostazioni}[vista]();
-  if (vista==="riordina") caricaRegistro();
+  if (sezione === "giochi") {
+    m.innerHTML = {libreria:vLibreria, recenti:vRecenti, installer:vInstaller, doppioni:vDoppioni, spazio:vSpazio, riordina:vRiordina}[vista]();
+    if (vista==="riordina") caricaRegistro();
+  } else {
+    m.innerHTML = {serie:vSerie, film:vFilm, anime:vAnime, impostazioni:vImpostazioni}[sezione]();
+  }
 }
 
 // ------------------------------------------------------------ card
@@ -605,7 +642,12 @@ async function controllaStato(){
 }
 async function esci(){ if (confirm(t("esci_conferma"))) { await api("/api/esci",{}); document.body.innerHTML=`<div class="vuoto">${t("app_chiusa")}</div>`; } }
 
-if (VISTE.includes(location.hash.slice(1))) vista = location.hash.slice(1);   // es. ...5577/#anime
+(() => {   // es. ...5577/#anime oppure #giochi/recenti
+  const [a, b] = location.hash.slice(1).split("/");
+  if (VISTE.includes(a)) { sezione = "giochi"; vista = a; }
+  else if (["serie","film","anime","impostazioni"].includes(a)) sezione = a;
+  else if (a === "giochi" && VISTE.includes(b)) vista = b;
+})();
 caricaMedia().catch(()=>{}).finally(() => carica().then(controllaStato));
 </script>
 </body>

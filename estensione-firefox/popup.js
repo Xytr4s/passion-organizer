@@ -14,7 +14,7 @@ function disegnaSiti() {
     const r = document.createElement("div");
     r.className = "sito";
     const t = document.createElement("span");
-    t.textContent = `${s.parola} · ${s.categoria === "anime" ? "Anime" : "Serie TV"}`;
+    t.textContent = `${s.parola} · ${({anime: "Anime", film: "Film"})[s.categoria] || "Serie TV"}`;
     const b = document.createElement("button");
     b.textContent = "✕";
     b.onclick = async () => { imp.siti.splice(i, 1); await salva(); disegnaSiti(); };

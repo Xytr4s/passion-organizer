@@ -296,3 +296,21 @@ Object.assign(TESTI.en, {
   voto_da_nome: "(from the name prefix: x = good, L = bad)",
   f_voto_tutti: "All ratings", f_voto_bello: "👍 Good", f_voto_sufficiente: "👌 Okay", f_voto_brutto: "👎 Bad", f_voto_senza: "Unrated",
 });
+
+// ---------------------------------------------------------------- barra laterale e sezione Film
+Object.assign(TESTI.it, {
+  sez_giochi: "Giochi", sez_serie: "Serie TV", sez_film: "Film", sez_anime: "Anime", sez_impostazioni: "Impostazioni",
+  stf_da_vedere: "Da vedere", stf_completata: "Visto", stf_droppata: "Droppato", m_visto: "Visto",
+  fonte_imdb: "dati IMDb",
+  m_vuoto_film: "Nessun film ancora. Premi “+ Aggiungi” o guarda un film con l'estensione di Firefox attiva.",
+  m_aggiungi_titolo_film: "Aggiungi film", m_cerca_lista: "🔍 Cerca nella lista…",
+  m_fonte_film: "Ricerca sui suggerimenti di IMDb (funziona anche con titoli italiani). Se non lo trovi, usa l'inserimento a mano.",
+});
+Object.assign(TESTI.en, {
+  sez_giochi: "Games", sez_serie: "TV Series", sez_film: "Movies", sez_anime: "Anime", sez_impostazioni: "Settings",
+  stf_da_vedere: "Plan to watch", stf_completata: "Watched", stf_droppata: "Dropped", m_visto: "Watched",
+  fonte_imdb: "IMDb data",
+  m_vuoto_film: "No movies yet. Press “+ Add” or watch a movie with the Firefox extension enabled.",
+  m_aggiungi_titolo_film: "Add movie", m_cerca_lista: "🔍 Search your list…",
+  m_fonte_film: "Searching IMDb suggestions (localized titles work too). If you can't find it, use manual entry.",
+});

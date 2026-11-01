@@ -25,7 +25,11 @@ _lock = threading.Lock()
 
 def carica():
     if FILE.exists():
-        return json.loads(FILE.read_text(encoding="utf-8"))
+        d = json.loads(FILE.read_text(encoding="utf-8"))
+        for t in d["titoli"]:                       # film aggiunti nella scheda serie prima della sezione Film
+            if t.get("tipo") == "film" and t.get("categoria") == "serie":
+                t["categoria"] = "film"
+        return d
     return {"titoli": [], "da_confermare": []}
 
 
@@ -260,6 +264,23 @@ def cerca_anime(q):
     return out
 
 
+def cerca_film(q):
+    """Film dai suggerimenti di ricerca di IMDb (servizio non ufficiale, senza chiave)."""
+    r = requests.get(f"https://v2.sg.media-imdb.com/suggestion/x/{requests.utils.quote(q.lower())}.json",
+                     headers={"User-Agent": "Mozilla/5.0"}, timeout=15)
+    out = []
+    for x in r.json().get("d", []):
+        if x.get("qid") not in ("movie", "tvMovie"):
+            continue
+        img = (x.get("i") or {}).get("imageUrl")
+        if img and "._V1_" in img:
+            img = img.split("._V1_")[0] + "._V1_UX300_.jpg"       # locandina ridotta, più leggera
+        out.append({"categoria": "film", "tipo": "film", "fonte": "imdb", "fonte_id": x.get("id"),
+                    "titolo": x.get("l"), "anno": x.get("y"), "copertina": img, "trama": x.get("s", ""),
+                    "stagioni": [{"numero": 1, "episodi_totali": 1}]})
+    return out[:12]
+
+
 def scheda_completa(risultato):
     """Prima di aggiungere: per le serie TVmaze scarica le stagioni con il numero di episodi."""
     if risultato.get("fonte") == "tvmaze" and not risultato.get("stagioni"):
@@ -335,6 +356,8 @@ def da_estensione(dati_pagina):
     dati_pagina: {titolo, url, sito, categoria, automatico}"""
     titolo, stagione, ep = analizza_pagina(dati_pagina.get("titolo", ""), dati_pagina.get("url", ""), dati_pagina.get("sito", ""))
     categoria = dati_pagina.get("categoria")
+    if categoria == "film" and titolo:
+        stagione, ep = 1, 1                          # un film è un solo "episodio": guardato = visto
     if not titolo or ep is None:
         return {"esito": "non_riconosciuto", "titolo": titolo, "stagione": stagione, "episodio": ep}
     d = carica()

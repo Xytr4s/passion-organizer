@@ -23,12 +23,14 @@ function vMediaGenerica(categoria){
 }
 function vSerie(){ return vMediaGenerica("serie"); }
 function vAnime(){ return vMediaGenerica("anime"); }
+function vFilm(){ return vMediaGenerica("film"); }
 
 function disegnaMedia(categoria){
   const el = document.getElementById("zonaMedia"); if (!el) return;
   el.className = "";
   const tutti = M.titoli.filter(x => x.categoria === categoria);
-  const conteggi = Object.fromEntries(STATI_MEDIA.map(s => [s, tutti.filter(x => x.stato === s).length]));
+  const stati = categoria === "film" ? ["da_vedere", "completata", "droppata"] : STATI_MEDIA;
+  const conteggi = Object.fromEntries(stati.map(s => [s, tutti.filter(x => x.stato === s).length]));
   const q = FM.testo.toLowerCase();
   let lista = tutti.filter(x => (!FM.stato || x.stato === FM.stato) &&
     (!q || [x.titolo, x.titolo_originale, ...(x.alias||[])].some(n => (n||"").toLowerCase().includes(q))));
@@ -39,13 +41,13 @@ function disegnaMedia(categoria){
   el.innerHTML = `
     <div class="filtri">
       <button class="b p" onclick="apriAggiungi('${categoria}')">${t_("m_aggiungi")}</button>
-      <input placeholder="${t_("cerca")}" value="${esc(FM.testo)}" oninput="FM.testo=this.value;disegnaMedia('${categoria}')" style="min-width:200px">
+      <input placeholder="${t_("m_cerca_lista")}" value="${esc(FM.testo)}" oninput="FM.testo=this.value;disegnaMedia('${categoria}')" style="min-width:200px">
       <select onchange="FM.ord=this.value;disegnaMedia('${categoria}')">${[["aggiornato","m_o_agg"],["titolo","m_o_titolo"],["voto","m_o_voto"],["anno","m_o_anno"]]
         .map(([v,k])=>`<option value="${v}" ${FM.ord===v?"selected":""}>${t_(k)}</option>`).join("")}</select>
     </div>
     <div class="filtri">
       <button class="chip ${FM.stato===""?"on":""}" onclick="FM.stato='';disegnaMedia('${categoria}')">${t_("m_tutti")} ${tutti.length}</button>
-      ${STATI_MEDIA.map(s=>`<button class="chip st-${s} ${FM.stato===s?"on":""}" onclick="FM.stato='${s}';disegnaMedia('${categoria}')">${t_("st_"+s)} ${conteggi[s]}</button>`).join("")}
+      ${stati.map(s=>`<button class="chip st-${s} ${FM.stato===s?"on":""}" onclick="FM.stato='${s}';disegnaMedia('${categoria}')">${t_((categoria==="film"?"stf_":"st_")+s)} ${conteggi[s]}</button>`).join("")}
     </div>
     ${inbox.length ? `<div class="blocco"><b>${t_("m_inbox")} (${inbox.length})</b> <span class="tenue">${t_("m_inbox_info")}</span>
       ${inbox.map(v => `<div class="riga"><span><b>${esc(v.titolo)}</b> ${v.stagione?`S${v.stagione} `:""}${t_("ep")} ${v.episodio}
@@ -67,18 +69,23 @@ function cardMedia(x){
     <div class="cop poster">${iniz}${x.copertina?`<img loading="lazy" src="${esc(x.copertina)}" onerror="this.remove()">`:""}</div>
     <div class="corpo">
       <div class="nome" title="${esc(x.titolo)}">${esc(x.titolo)}</div>
-      <div class="meta"><span class="t st-${x.stato}">${t_("st_"+x.stato)}</span>${x.anno?`<span class="t">${x.anno}</span>`:""}
-        ${x.tipo==="film"?`<span class="t">${t_("m_film")}</span>`:""}${x.voto?`<span class="t">★ ${x.voto}</span>`:""}</div>
+      <div class="meta"><span class="t st-${x.stato}">${t_((x.tipo==="film"?"stf_":"st_")+x.stato)}</span>${x.anno?`<span class="t">${x.anno}</span>`:""}
+        ${x.tipo==="film" && x.categoria!=="film"?`<span class="t">${t_("m_film")}</span>`:""}${x.voto?`<span class="t">★ ${x.voto}</span>`:""}</div>
       ${x.tipo!=="film" ? `<div class="tenue" style="font-size:12px">${progressoTxt(x)}</div>
         <div class="barra" style="height:5px"><div style="width:${perc}%;background:var(--ok)"></div></div>` : ""}
-      <div class="azioni">${puo1?`<button class="b p" onclick="event.stopPropagation();piuUno('${x.id}',${s.numero})">+1 ${t_("ep")}</button>`:""}
+      <div class="azioni">${x.tipo==="film" && x.stato!=="completata" ? `<button class="b p" onclick="event.stopPropagation();filmVisto('${x.id}')">✔ ${t_("m_visto")}</button>` : ""}
+        ${puo1?`<button class="b p" onclick="event.stopPropagation();piuUno('${x.id}',${s.numero})">+1 ${t_("ep")}</button>`:""}
         <button class="b" onclick="event.stopPropagation();dettaglioMedia('${x.id}')">${t_("m_dettagli")}</button></div>
     </div></div>`;
 }
 
+async function filmVisto(id){
+  await api(`/api/media/${id}/modifica`, {stagione: 1, stato: "completata", visti: 1});
+  await caricaMedia(); disegnaMedia(sezione);
+}
 async function piuUno(id, stagione, delta=1){
   await api(`/api/media/${id}/episodio`, {stagione, delta});
-  await caricaMedia(); disegnaMedia(vista); if (document.getElementById("modale").style.display==="flex") dettaglioMedia(id);
+  await caricaMedia(); disegnaMedia(sezione); if (document.getElementById("modale").style.display==="flex") dettaglioMedia(id);
 }
 
 function dettaglioMedia(id){
@@ -125,7 +132,7 @@ function dettaglioMedia(id){
 
 async function salvaMedia(id, campi){
   await api(`/api/media/${id}/modifica`, campi);
-  await caricaMedia(); disegnaMedia(vista); dettaglioMedia(id);
+  await caricaMedia(); disegnaMedia(sezione); dettaglioMedia(id);
 }
 function droppa(id, stagione, visti){
   const ep = prompt(t_("m_droppa_chiedi"), visti);
@@ -136,17 +143,17 @@ async function nuovaStagione(id){
   const n = prompt(t_("m_episodi_nuova"), "");
   if (n === null) return;
   await api(`/api/media/${id}/stagione`, {episodi_totali: n ? +n : null});
-  await caricaMedia(); disegnaMedia(vista); dettaglioMedia(id);
+  await caricaMedia(); disegnaMedia(sezione); dettaglioMedia(id);
 }
 async function eliminaStagione(id, numero){
   if (!confirm(t_("m_conferma_elimina_stagione"))) return;
   await api(`/api/media/${id}/stagione`, {elimina: numero});
-  await caricaMedia(); disegnaMedia(vista); dettaglioMedia(id);
+  await caricaMedia(); disegnaMedia(sezione); dettaglioMedia(id);
 }
 async function eliminaMedia(id){
   if (!confirm(t_("m_conferma_elimina"))) return;
   await api(`/api/media/${id}/elimina`, {});
-  chiudiModale(); await caricaMedia(); disegnaMedia(vista);
+  chiudiModale(); await caricaMedia(); disegnaMedia(sezione);
 }
 
 // ---------------------------------------------------------------- aggiunta
@@ -155,11 +162,11 @@ function apriAggiungi(categoria, testo="", voce=""){
     <div class="riga"><input id="qMedia" value="${esc(testo)}" placeholder="${t_("m_cerca_titolo")}" style="flex:1"
       onkeydown="if(event.key==='Enter')cercaMedia('${categoria}','${voce}')">
       <button class="b p" onclick="cercaMedia('${categoria}','${voce}')">${t_("m_cerca")}</button></div>
-    <p class="tenue" style="margin:4px 0">${t_(categoria==="anime"?"m_fonte_anime":"m_fonte_serie")}</p>
+    <p class="tenue" style="margin:4px 0">${t_("m_fonte_" + categoria)}</p>
     <div id="risMedia"></div>
     <details style="margin-top:12px"><summary>${t_("m_manuale")}</summary>
       <div class="riga"><input id="manTitolo" placeholder="${t_("m_titolo")}" value="${esc(testo)}" style="flex:1">
-        <select id="manTipo"><option value="serie">${t_("m_serie")}</option><option value="film">${t_("m_film")}</option></select></div>
+        ${categoria === "film" ? "" : `<select id="manTipo"><option value="serie">${t_("m_serie")}</option><option value="film">${t_("m_film")}</option></select>`}</div>
       <div class="riga">${t_("m_n_stagioni")} <input id="manStagioni" type="number" min="1" value="1" style="width:60px">
         ${t_("m_ep_per_stagione")} <input id="manEpisodi" type="number" min="0" placeholder="?" style="width:70px">
         <button class="b" onclick="aggiungiManuale('${categoria}','${voce}')">${t_("m_aggiungi_btn")}</button></div>
@@ -187,17 +194,17 @@ async function aggiungiRisultato(i, voce){
   document.getElementById("risMedia").innerHTML = `<p class="tenue">${t_("m_aggiungo")}</p>`;
   if (voce) await api(`/api/media/conferma/${voce}`, {scheda});
   else await api("/api/media/aggiungi", scheda);
-  chiudiModale(); await caricaMedia(); disegnaMedia(vista); toast(t_("m_aggiunto") + " " + scheda.titolo);
+  chiudiModale(); await caricaMedia(); disegnaMedia(sezione); toast(t_("m_aggiunto") + " " + scheda.titolo);
 }
 async function aggiungiManuale(categoria, voce){
   const titolo = document.getElementById("manTitolo").value.trim(); if (!titolo) return;
-  const tipo = document.getElementById("manTipo").value;
+  const tipo = categoria === "film" ? "film" : document.getElementById("manTipo").value;
   const n = Math.max(1, +document.getElementById("manStagioni").value || 1), ep = document.getElementById("manEpisodi").value;
   const scheda = {categoria, tipo, titolo, fonte:"manuale",
     stagioni: Array.from({length: tipo==="film" ? 1 : n}, (_, k) => ({numero:k+1, episodi_totali: tipo==="film" ? 1 : (ep ? +ep : null)}))};
   if (voce) await api(`/api/media/conferma/${voce}`, {scheda});
   else await api("/api/media/aggiungi", scheda);
-  chiudiModale(); await caricaMedia(); disegnaMedia(vista);
+  chiudiModale(); await caricaMedia(); disegnaMedia(sezione);
 }
 async function confermaVoce(voce, categoria){
   const id = document.getElementById("col-"+voce).value;

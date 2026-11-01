@@ -53,7 +53,7 @@
   async function segna() {
     const r = await browser.runtime.sendMessage({ tipo: "segna", pagina: pagina() });
     if (!r || r.errore) return avviso("📺 " + (r?.errore || "Errore"));
-    const ep = `${r.stagione ? "S" + r.stagione + " " : ""}ep ${r.episodio}`;
+    const ep = sito.categoria === "film" ? "(film)" : `${r.stagione ? "S" + r.stagione + " " : ""}ep ${r.episodio}`;
     if (r.esito === "aggiornato") avviso(`✔ Segnato nel Gestore: ${r.titolo} · ${ep}`);
     else if (r.esito === "da_confermare") avviso(`📥 "${r.titolo}" ${ep} non è in lista: lo trovi da confermare nel Gestore.`);
   }
@@ -63,7 +63,7 @@
     const a = await browser.runtime.sendMessage({ tipo: "analizza", pagina: pagina() });
     if (!a || a.errore || a.episodio == null) return;          // non è la pagina di un episodio
     if (imp.modalita === "conferma") {
-      const ep = `${a.stagione ? "S" + a.stagione + " " : ""}ep ${a.episodio}`;
+      const ep = sito.categoria === "film" ? "(film)" : `${a.stagione ? "S" + a.stagione + " " : ""}ep ${a.episodio}`;
       avviso(`📺 Segnare "${a.in_lista || a.titolo}" ${ep} nel Gestore?`, [["Sì", segna], ["No", null]]);
     } else {
       segna();

@@ -351,7 +351,8 @@ def api_media_cerca():
     if not q:
         return jsonify([])
     try:
-        return jsonify(media.cerca_anime(q) if categoria == "anime" else media.cerca_serie(q))
+        cerca = {"anime": media.cerca_anime, "film": media.cerca_film}.get(categoria, media.cerca_serie)
+        return jsonify(cerca(q))
     except Exception as e:
         return jsonify({"errore": str(e)}), 502
 
@@ -421,6 +422,8 @@ def api_estensione_analizza():
     """Cosa riconosce l'estensione in una pagina, senza salvare nulla."""
     j = request.get_json(force=True, silent=True) or {}
     titolo, stagione, ep = media.analizza_pagina(j.get("titolo", ""), j.get("url", ""), j.get("sito", ""))
+    if j.get("categoria") == "film" and titolo:
+        stagione, ep = 1, 1
     t, punti = media.abbina(media.carica(), titolo, j.get("categoria"))
     trovato = t if t and punti >= 0.85 else None
     return jsonify(titolo=titolo, stagione=stagione, episodio=ep,
