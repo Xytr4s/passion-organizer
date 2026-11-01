@@ -461,6 +461,16 @@ def api_stagione_mal():
         return jsonify(errore=str(e), anno=anno, stagione=stagione), 502
 
 
+@app.get("/api/media/stagioni/archivio")
+def api_stagioni_archivio():
+    return jsonify(media.archivio_per_interfaccia())
+
+
+@app.get("/api/media/stagioni/elenco")
+def api_stagioni_elenco():
+    return jsonify([{"anno": a, "stagione": s} for a, s in media.elenco_stagioni()])
+
+
 @app.post("/api/media/stagione/scelta")
 def api_stagione_mal_scelta():
     j = request.json or {}
@@ -580,6 +590,7 @@ if __name__ == "__main__":
     threading.Thread(target=cerca_copertine, daemon=True).start()
     threading.Thread(target=_carica_velocita, daemon=True).start()
     sincronizza.avvia_in_background()                 # telefono: ogni 5 minuti e dopo ogni modifica
+    threading.Timer(60, media.scarica_archivio).start()   # stagioni MAL dal 2020, una ogni 15 s, solo quelle mancanti
     sincronizza.richiedi()                            # e una volta all'avvio
     if not scanner.DATI_FILE.exists() or "--avvio" in sys.argv:
         # All'accensione del PC: aggiornamento veloce (ricalcola solo le cartelle cambiate)

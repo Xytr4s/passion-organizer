@@ -522,12 +522,20 @@ def leggi_stagione_mal(anno, stagione, forza=False):
     """Anime della stagione dalla pagina di MyAnimeList (con cache di 6 ore)."""
     CACHE_STAGIONI.mkdir(exist_ok=True)
     f = CACHE_STAGIONI / f"{anno}-{stagione}.json"
-    if f.exists() and not forza and time.time() - f.stat().st_mtime < 6 * 3600:
+    # stagione in corso o futura: si aggiorna ogni 6 ore; stagioni passate: una volta al mese (i voti cambiano poco)
+    passata = (anno, STAGIONI.index(stagione)) < (lambda a, s: (a, STAGIONI.index(s)))(*stagione_attuale_mal())
+    futura = (anno, STAGIONI.index(stagione)) > (lambda a, s: (a, STAGIONI.index(s)))(*stagione_attuale_mal())
+    durata = 30 * 86400 if passata else 86400 if futura else 6 * 3600
+    if f.exists() and not forza and time.time() - f.stat().st_mtime < durata:
         return json.loads(f.read_text(encoding="utf-8"))
     r = requests.get(f"https://myanimelist.net/anime/season/{anno}/{stagione}",
                      headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:130.0) Gecko/20100101 Firefox/130.0"},
                      timeout=60)
     r.raise_for_status()
+    titolo = (re.search(r"<title>\s*(\w+)\s+(\d{4})\s+-\s+Anime", r.text) or [None, "", ""])
+    if (titolo[1].lower(), titolo[2]) != (stagione, str(anno)):
+        f.write_text("[]", encoding="utf-8")       # stagione non ancora pubblicata: nessun anime (si ricontrolla)
+        return []
     out, visti = [], set()
     # la pagina è divisa in sezioni: TV (New), TV (Continuing), ONA, OVA, Movie, Special
     pezzi = re.split(r'<div class="anime-header">([^<]+)</div>', r.text)
@@ -610,3 +618,69 @@ def scelta_stagione(voce, azione):
     t = trova(carica(), esistente)
     numero = (stagione_attuale(t) or {}).get("numero", 1)
     return modifica(esistente, {"stagione": numero, "stato": stato})
+
+
+
+# ================================================================ archivio delle stagioni dal 2020
+
+ARCHIVIO = {"in_corso": False, "fatte": 0, "totale": 0, "errore": None}
+
+
+def elenco_stagioni(dal=2020, future=4):
+    """Dall'inverno dell'anno indicato fino a `future` stagioni dopo quella in corso."""
+    fine = stagione_vicina(*stagione_attuale_mal(), future)
+    out, a, st = [], dal, "winter"
+    while (a, STAGIONI.index(st)) <= (fine[0], STAGIONI.index(fine[1])):
+        out.append((a, st))
+        a, st = stagione_vicina(a, st, 1)
+    return out
+
+
+def scarica_archivio(pausa=15):
+    """In background: scarica le stagioni mancanti, una ogni `pausa` secondi (gentile con MyAnimeList)."""
+    elenco = elenco_stagioni()
+    ARCHIVIO.update(in_corso=True, totale=len(elenco), errore=None)
+    try:
+        for i, (a, st) in enumerate(elenco):
+            f = CACHE_STAGIONI / f"{a}-{st}.json"
+            ARCHIVIO["fatte"] = i
+            futura = (a, STAGIONI.index(st)) > (lambda x, y: (x, STAGIONI.index(y)))(*stagione_attuale_mal())
+            if f.exists() and not (futura and time.time() - f.stat().st_mtime > 86400):
+                continue
+            try:
+                leggi_stagione_mal(a, st)
+            except Exception as e:
+                ARCHIVIO["errore"] = f"{a} {st}: {e}"
+            time.sleep(pausa)
+        ARCHIVIO["fatte"] = len(elenco)
+    finally:
+        ARCHIVIO["in_corso"] = False
+
+
+def archivio_per_interfaccia():
+    """Tutte le stagioni scaricate insieme: ogni anime una volta sola, con la stagione in cui è uscito."""
+    d = carica()
+    per_mal = {str(t.get("mal_id")): t for t in d["titoli"] if t.get("mal_id")}
+    scartati = set(d.get("stagione_scartati", []))
+    voci, visti, scaricate = [], {}, 0
+    for a, st in elenco_stagioni(future=0):
+        f = CACHE_STAGIONI / f"{a}-{st}.json"
+        if not f.exists():
+            continue
+        scaricate += 1
+        for v in json.loads(f.read_text(encoding="utf-8")):
+            vecchia = visti.get(v["mal_id"])
+            if vecchia is not None:
+                # già vista in una stagione precedente: tengo l'uscita, aggiorno solo voto e membri più recenti
+                vecchia["voto_mal"] = v["voto_mal"] or vecchia["voto_mal"]
+                vecchia["membri"] = max(vecchia["membri"], v["membri"])
+                continue
+            v = dict(v, anno_stagione=a, nome_stagione=st)
+            if v["sezione"] == "TV (Continuing)":
+                v["sezione"] = "TV (New)"     # serie iniziata prima del 2020: la tratto come una serie TV
+            t = per_mal.get(v["mal_id"])
+            v["in_lista"] = {"id": t["id"], "stato": t["stato"]} if t else None
+            v["scartato"] = v["mal_id"] in scartati
+            visti[v["mal_id"]] = v
+            voci.append(v)
+    return {"voci": voci, "scaricate": scaricate, "totale": len(elenco_stagioni(future=0)), **{"scaricamento": dict(ARCHIVIO)}}

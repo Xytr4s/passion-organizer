@@ -249,20 +249,25 @@ async function scartaVoce(voce, categoria){
 
 // ---------------------------------------------------------------- stagione di MyAnimeList (anime per voto)
 const STG = {aperta: false, anno: null, stagione: null, voci: [], sezione: "TV (New)", nascondiLista: false,
-             nascondiScartati: true, ord: "voto", caricamento: false, errore: null};
+             nascondiScartati: true, ord: "voto", caricamento: false, errore: null,
+             archivio: false, annoFiltro: "", elenco: [], progresso: null};
 const NOMI_STAGIONI = ["winter", "spring", "summer", "fall"];
 
 function stagioneCorrente(){ const d = new Date(); return [d.getFullYear(), NOMI_STAGIONI[Math.floor(d.getMonth() / 3)]]; }
 function stagioneNuova(){ const [a, s] = stagioneCorrente(); return !(M.stagioni_viste || []).includes(`${a}-${s}`); }
 
 async function apriStagione(anno, stagione, forza){
-  STG.aperta = true; STG.caricamento = true; STG.errore = null;
+  STG.aperta = true; STG.caricamento = true; STG.errore = null; STG.archivio = false;
+  if (!STG.elenco.length) STG.elenco = await api("/api/media/stagioni/elenco");
   disegnaStagione();
   const q = anno ? `?anno=${anno}&stagione=${stagione}${forza ? "&forza=1" : ""}` : (forza ? "?forza=1" : "");
   const r = await api("/api/media/stagione" + q);
   STG.caricamento = false;
   STG.anno = r.anno; STG.stagione = r.stagione;
   if (r.errore) { STG.errore = r.errore; STG.voci = []; } else STG.voci = r.voci;
+  const [aa, sa] = stagioneCorrente();
+  STG.futura = r.anno * 4 + NOMI_STAGIONI.indexOf(r.stagione) > aa * 4 + NOMI_STAGIONI.indexOf(sa);
+  if (STG.futura) STG.ord = "membri";
   await caricaMedia();
   disegnaStagione();
 }
@@ -279,7 +284,7 @@ function disegnaStagione(){
   const titolo = STG.anno ? `${t_("stg_" + STG.stagione)} ${STG.anno}` : "…";
   const sezioni = [...new Set(STG.voci.map(v => v.sezione))];
   const conta = sez => STG.voci.filter(v => v.sezione === sez).length;
-  let lista = STG.voci.filter(v => (!STG.sezione || v.sezione === STG.sezione)
+  let lista = STG.voci.filter(v => (!STG.sezione || v.sezione === STG.sezione) && (!STG.annoFiltro || v.anno_stagione == STG.annoFiltro)
     && !(STG.nascondiLista && v.in_lista) && !(STG.nascondiScartati && v.scartato));
   const ord = {voto: (a, b) => (b.voto_mal || 0) - (a.voto_mal || 0) || b.membri - a.membri,
                membri: (a, b) => b.membri - a.membri, data: (a, b) => (b.inizio || "").localeCompare(a.inizio || "")};
@@ -288,10 +293,15 @@ function disegnaStagione(){
   el.innerHTML = `
     <div class="filtri">
       <button class="b" onclick="chiudiStagione()">← ${t_("stg_torna")}</button>
-      <button class="b" onclick="spostaStagione(-1)" ${STG.anno ? "" : "disabled"}>◀</button>
-      <b style="font-size:16px;min-width:140px;text-align:center">📅 ${titolo}</b>
-      <button class="b" onclick="spostaStagione(1)" ${STG.anno ? "" : "disabled"}>▶</button>
-      <button class="b" title="${t_("stg_aggiorna")}" onclick="apriStagione(STG.anno, STG.stagione, true)">↻</button>
+      <button class="b" onclick="spostaStagione(-1)" ${STG.anno && !STG.archivio ? "" : "disabled"}>◀</button>
+      <select onchange="const [a, s] = this.value.split('-'); apriStagione(+a, s)">${STG.elenco.slice().reverse().map(e =>
+        `<option value="${e.anno}-${e.stagione}" ${!STG.archivio && e.anno === STG.anno && e.stagione === STG.stagione ? "selected" : ""}>${t_("stg_" + e.stagione)} ${e.anno}</option>`).join("")}
+        ${STG.archivio ? `<option selected>🏆 ${t_("stg_archivio")}</option>` : ""}</select>
+      <button class="b ${STG.archivio ? "p" : ""}" onclick="apriArchivio()">🏆 ${t_("stg_archivio")}</button>
+      <button class="b" onclick="spostaStagione(1)" ${STG.anno && !STG.archivio ? "" : "disabled"}>▶</button>
+      ${STG.archivio ? `<select onchange="STG.annoFiltro=this.value;disegnaStagione()"><option value="">${t_("stg_tutti_anni")}</option>
+          ${[...new Set(STG.voci.map(v => v.anno_stagione))].sort().reverse().map(a => `<option ${STG.annoFiltro == a ? "selected" : ""}>${a}</option>`).join("")}</select>`
+        : `<button class="b" title="${t_("stg_aggiorna")}" onclick="apriStagione(STG.anno, STG.stagione, true)">↻</button>`}
       <select onchange="STG.ord=this.value;disegnaStagione()">${[["voto","stg_o_voto"],["membri","stg_o_membri"],["data","stg_o_data"]]
         .map(([v, k]) => `<option value="${v}" ${STG.ord === v ? "selected" : ""}>${t_(k)}</option>`).join("")}</select>
       <label class="tenue"><input type="checkbox" ${STG.nascondiLista ? "checked" : ""} onchange="STG.nascondiLista=this.checked;disegnaStagione()"> ${t_("stg_nascondi_lista")}</label>
@@ -301,9 +311,13 @@ function disegnaStagione(){
       <button class="chip ${STG.sezione === "" ? "on" : ""}" onclick="STG.sezione='';disegnaStagione()">${t_("m_tutti")} ${STG.voci.length}</button>
       ${sezioni.map(z => `<button class="chip ${STG.sezione === z ? "on" : ""}" onclick='STG.sezione=${JSON.stringify(z)};disegnaStagione()'>${esc(t_("stg_sez_" + z.replace(/[^A-Za-z]/g, "")) || z)} ${conta(z)}</button>`).join("")}
     </div>
+    ${STG.archivio && STG.progresso && STG.progresso.scaricate < STG.progresso.totale
+        ? `<p class="tenue">⏳ ${t_("stg_archivio_progresso", {n: STG.progresso.scaricate, tot: STG.progresso.totale})}</p>` : ""}
     ${STG.caricamento ? `<div class="vuoto">${t_("stg_carico")}</div>`
       : STG.errore ? `<div class="vuoto ko">${t_("stg_errore")} ${esc(STG.errore)}</div>`
-      : lista.length ? `<div class="griglia poster">${lista.map(cardStagione).join("")}</div>` : `<div class="vuoto">${t_("m_nessuno_filtro")}</div>`}`;
+      : lista.length ? `<div class="griglia poster">${lista.map(cardStagione).join("")}</div>`
+      : `<div class="vuoto">${!STG.archivio && !STG.voci.length ? t_("stg_non_pubblicata") : t_("m_nessuno_filtro")}</div>`}
+    ${STG.futura && STG.voci.length ? `<p class="tenue">🔮 ${t_("stg_futura_info")}</p>` : ""}`;
 }
 
 function cardStagione(v){
@@ -317,6 +331,7 @@ function cardStagione(v){
       <div class="meta">
         <span class="t" style="color:var(--warn)">★ ${v.voto_mal ? v.voto_mal.toFixed(2) : "N/A"}</span>
         <span class="t">👥 ${membri}</span><span class="t">${v.episodi || "?"} ${t_("ep")}</span>
+        ${v.anno_stagione ? `<span class="t">${t_("stg_" + v.nome_stagione)} ${v.anno_stagione}</span>` : ""}
         ${st ? `<span class="t st-${st}">${t_("st_" + st)}</span>` : ""}
       </div>
       <div class="tenue" style="font-size:12px">${esc(v.generi.join(", "))}</div>
@@ -332,10 +347,19 @@ function cardStagione(v){
 
 async function sceltaStagione(voce, azione){
   await api("/api/media/stagione/scelta", {voce, azione});
-  const r = await api(`/api/media/stagione?anno=${STG.anno}&stagione=${STG.stagione}`);
+  const r = STG.archivio ? await api("/api/media/stagioni/archivio") : await api(`/api/media/stagione?anno=${STG.anno}&stagione=${STG.stagione}`);
   if (!r.errore) STG.voci = r.voci;
   await caricaMedia();
   disegnaNav();
   disegnaStagione();
   if (azione === "guarda" || azione === "pianifica") toast(`${azione === "guarda" ? "▶" : "📌"} ${voce.titolo}`);
+}
+
+async function apriArchivio(){
+  STG.aperta = true; STG.archivio = true; STG.caricamento = true; STG.errore = null;
+  if (!STG.elenco.length) STG.elenco = await api("/api/media/stagioni/elenco");
+  disegnaStagione();
+  const r = await api("/api/media/stagioni/archivio");
+  STG.caricamento = false; STG.voci = r.voci; STG.progresso = {scaricate: r.scaricate, totale: r.totale};
+  disegnaStagione();
 }

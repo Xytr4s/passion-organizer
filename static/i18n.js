@@ -400,3 +400,23 @@ Object.assign(TESTI.en, {
   stg_carico: "Loading the season from MyAnimeList…", stg_errore: "MyAnimeList unreachable:",
   stg_guardo: "Watch it (Watching)", stg_pianifico: "Plan it (Plan to watch)", stg_scarta: "Not interested", stg_ripristina: "Restore",
 });
+
+// ---------------------------------------------------------------- archivio stagioni
+Object.assign(TESTI.it, {
+  stg_archivio: "Dal 2020", stg_tutti_anni: "Tutti gli anni",
+  stg_archivio_progresso: "Scarico l'archivio da MyAnimeList: {n} stagioni su {tot}. Riapri “Dal 2020” tra qualche minuto per vederle tutte.",
+});
+Object.assign(TESTI.en, {
+  stg_archivio: "Since 2020", stg_tutti_anni: "All years",
+  stg_archivio_progresso: "Downloading the archive from MyAnimeList: {n} of {tot} seasons. Reopen “Since 2020” in a few minutes to see them all.",
+});
+
+// ---------------------------------------------------------------- stagioni future
+Object.assign(TESTI.it, {
+  stg_non_pubblicata: "Questa stagione non è ancora stata pubblicata su MyAnimeList: gli anime compariranno man mano che vengono annunciati (controllo ogni giorno).",
+  stg_futura_info: "Stagione futura: i voti non ci sono ancora, l'ordine è per popolarità (quanti utenti MAL la aspettano). Usa 📌 per pianificare.",
+});
+Object.assign(TESTI.en, {
+  stg_non_pubblicata: "This season isn't on MyAnimeList yet: anime will appear as they are announced (checked daily).",
+  stg_futura_info: "Upcoming season: no scores yet, sorted by popularity (how many MAL users are waiting for it). Use 📌 to plan.",
+});
