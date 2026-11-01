@@ -380,3 +380,23 @@ Object.assign(TESTI.en, {
   au_in_corso: "Reading the profile and importing…",
   au_fatto: "{tot} anime read: {nuovi} new, {agg} updated, {inv} already up to date here.",
 });
+
+// ---------------------------------------------------------------- stagione di MyAnimeList
+Object.assign(TESTI.it, {
+  stg_pulsante: "Stagione", stg_torna: "La mia lista", stg_aggiorna: "Aggiorna da MyAnimeList",
+  stg_winter: "Inverno", stg_spring: "Primavera", stg_summer: "Estate", stg_fall: "Autunno",
+  stg_o_voto: "Ordina: voto MAL", stg_o_membri: "Ordina: popolarità", stg_o_data: "Ordina: data di uscita",
+  stg_nascondi_lista: "Nascondi quelli già in lista", stg_nascondi_scartati: "Nascondi scartati ({n})",
+  stg_sez_TVNew: "TV nuove", stg_sez_TVContinuing: "TV in corso", stg_sez_ONA: "ONA", stg_sez_OVA: "OVA", stg_sez_Movie: "Film", stg_sez_Special: "Speciali",
+  stg_carico: "Carico la stagione da MyAnimeList…", stg_errore: "MyAnimeList non raggiungibile:",
+  stg_guardo: "Lo guardo (In corso)", stg_pianifico: "Lo pianifico (Da vedere)", stg_scarta: "Non mi interessa", stg_ripristina: "Ripristina",
+});
+Object.assign(TESTI.en, {
+  stg_pulsante: "Season", stg_torna: "My list", stg_aggiorna: "Refresh from MyAnimeList",
+  stg_winter: "Winter", stg_spring: "Spring", stg_summer: "Summer", stg_fall: "Fall",
+  stg_o_voto: "Sort: MAL score", stg_o_membri: "Sort: popularity", stg_o_data: "Sort: start date",
+  stg_nascondi_lista: "Hide titles already in my list", stg_nascondi_scartati: "Hide skipped ({n})",
+  stg_sez_TVNew: "TV (New)", stg_sez_TVContinuing: "TV (Continuing)", stg_sez_ONA: "ONA", stg_sez_OVA: "OVA", stg_sez_Movie: "Movies", stg_sez_Special: "Specials",
+  stg_carico: "Loading the season from MyAnimeList…", stg_errore: "MyAnimeList unreachable:",
+  stg_guardo: "Watch it (Watching)", stg_pianifico: "Plan it (Plan to watch)", stg_scarta: "Not interested", stg_ripristina: "Restore",
+});

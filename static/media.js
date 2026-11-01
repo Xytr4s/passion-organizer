@@ -18,7 +18,11 @@ function progressoTxt(x){
 }
 
 function vMediaGenerica(categoria){
-  setTimeout(async () => { await caricaMedia(); disegnaMedia(categoria); });
+  setTimeout(async () => {
+    await caricaMedia();
+    if (categoria === "anime" && window._apriStagione) { window._apriStagione = false; return apriStagione(); }
+    disegnaMedia(categoria);
+  });
   return `<div id="zonaMedia" class="vuoto">…</div>`;
 }
 function vSerie(){ return vMediaGenerica("serie"); }
@@ -27,6 +31,7 @@ function vFilm(){ return vMediaGenerica("film"); }
 
 function disegnaMedia(categoria){
   const el = document.getElementById("zonaMedia"); if (!el) return;
+  if (categoria === "anime" && STG.aperta) return disegnaStagione();
   el.className = "";
   const tutti = M.titoli.filter(x => x.categoria === categoria);
   const stati = categoria === "film" ? ["da_vedere", "completata", "droppata"] : STATI_MEDIA;
@@ -41,7 +46,8 @@ function disegnaMedia(categoria){
   el.innerHTML = `
     <div class="filtri">
       <button class="b p" onclick="apriAggiungi('${categoria}')">${t_("m_aggiungi")}</button>
-      ${categoria === "anime" ? `<button class="b" onclick="importaAnimeunity()">⬇ ${t_("au_importa")}</button>` : ""}
+      ${categoria === "anime" ? `<button class="b" onclick="apriStagione()">📅 ${t_("stg_pulsante")}${stagioneNuova() ? ' <span class="badge-n">NEW</span>' : ""}</button>
+        <button class="b" onclick="importaAnimeunity()">⬇ ${t_("au_importa")}</button>` : ""}
       <input placeholder="${t_("m_cerca_lista")}" value="${esc(FM.testo)}" oninput="FM.testo=this.value;disegnaMedia('${categoria}')" style="min-width:200px">
       <select onchange="FM.ord=this.value;disegnaMedia('${categoria}')">${[["aggiornato","m_o_agg"],["titolo","m_o_titolo"],["voto","m_o_voto"],["anno","m_o_anno"]]
         .map(([v,k])=>`<option value="${v}" ${FM.ord===v?"selected":""}>${t_(k)}</option>`).join("")}</select>
@@ -238,4 +244,98 @@ async function confermaVoce(voce, categoria){
 async function scartaVoce(voce, categoria){
   await api(`/api/media/conferma/${voce}`, {scarta:true});
   await caricaMedia(); disegnaMedia(categoria);
+}
+
+
+// ---------------------------------------------------------------- stagione di MyAnimeList (anime per voto)
+const STG = {aperta: false, anno: null, stagione: null, voci: [], sezione: "TV (New)", nascondiLista: false,
+             nascondiScartati: true, ord: "voto", caricamento: false, errore: null};
+const NOMI_STAGIONI = ["winter", "spring", "summer", "fall"];
+
+function stagioneCorrente(){ const d = new Date(); return [d.getFullYear(), NOMI_STAGIONI[Math.floor(d.getMonth() / 3)]]; }
+function stagioneNuova(){ const [a, s] = stagioneCorrente(); return !(M.stagioni_viste || []).includes(`${a}-${s}`); }
+
+async function apriStagione(anno, stagione, forza){
+  STG.aperta = true; STG.caricamento = true; STG.errore = null;
+  disegnaStagione();
+  const q = anno ? `?anno=${anno}&stagione=${stagione}${forza ? "&forza=1" : ""}` : (forza ? "?forza=1" : "");
+  const r = await api("/api/media/stagione" + q);
+  STG.caricamento = false;
+  STG.anno = r.anno; STG.stagione = r.stagione;
+  if (r.errore) { STG.errore = r.errore; STG.voci = []; } else STG.voci = r.voci;
+  await caricaMedia();
+  disegnaStagione();
+}
+function spostaStagione(passo){
+  let i = NOMI_STAGIONI.indexOf(STG.stagione) + passo, a = STG.anno;
+  if (i < 0) { i = 3; a--; } if (i > 3) { i = 0; a++; }
+  apriStagione(a, NOMI_STAGIONI[i]);
+}
+function chiudiStagione(){ STG.aperta = false; disegnaMedia("anime"); }
+
+function disegnaStagione(){
+  const el = document.getElementById("zonaMedia"); if (!el) return;
+  el.className = "";
+  const titolo = STG.anno ? `${t_("stg_" + STG.stagione)} ${STG.anno}` : "…";
+  const sezioni = [...new Set(STG.voci.map(v => v.sezione))];
+  const conta = sez => STG.voci.filter(v => v.sezione === sez).length;
+  let lista = STG.voci.filter(v => (!STG.sezione || v.sezione === STG.sezione)
+    && !(STG.nascondiLista && v.in_lista) && !(STG.nascondiScartati && v.scartato));
+  const ord = {voto: (a, b) => (b.voto_mal || 0) - (a.voto_mal || 0) || b.membri - a.membri,
+               membri: (a, b) => b.membri - a.membri, data: (a, b) => (b.inizio || "").localeCompare(a.inizio || "")};
+  lista.sort(ord[STG.ord]);
+  const scartati = STG.voci.filter(v => v.scartato).length;
+  el.innerHTML = `
+    <div class="filtri">
+      <button class="b" onclick="chiudiStagione()">← ${t_("stg_torna")}</button>
+      <button class="b" onclick="spostaStagione(-1)" ${STG.anno ? "" : "disabled"}>◀</button>
+      <b style="font-size:16px;min-width:140px;text-align:center">📅 ${titolo}</b>
+      <button class="b" onclick="spostaStagione(1)" ${STG.anno ? "" : "disabled"}>▶</button>
+      <button class="b" title="${t_("stg_aggiorna")}" onclick="apriStagione(STG.anno, STG.stagione, true)">↻</button>
+      <select onchange="STG.ord=this.value;disegnaStagione()">${[["voto","stg_o_voto"],["membri","stg_o_membri"],["data","stg_o_data"]]
+        .map(([v, k]) => `<option value="${v}" ${STG.ord === v ? "selected" : ""}>${t_(k)}</option>`).join("")}</select>
+      <label class="tenue"><input type="checkbox" ${STG.nascondiLista ? "checked" : ""} onchange="STG.nascondiLista=this.checked;disegnaStagione()"> ${t_("stg_nascondi_lista")}</label>
+      <label class="tenue"><input type="checkbox" ${STG.nascondiScartati ? "checked" : ""} onchange="STG.nascondiScartati=this.checked;disegnaStagione()"> ${t_("stg_nascondi_scartati", {n: scartati})}</label>
+    </div>
+    <div class="filtri">
+      <button class="chip ${STG.sezione === "" ? "on" : ""}" onclick="STG.sezione='';disegnaStagione()">${t_("m_tutti")} ${STG.voci.length}</button>
+      ${sezioni.map(z => `<button class="chip ${STG.sezione === z ? "on" : ""}" onclick='STG.sezione=${JSON.stringify(z)};disegnaStagione()'>${esc(t_("stg_sez_" + z.replace(/[^A-Za-z]/g, "")) || z)} ${conta(z)}</button>`).join("")}
+    </div>
+    ${STG.caricamento ? `<div class="vuoto">${t_("stg_carico")}</div>`
+      : STG.errore ? `<div class="vuoto ko">${t_("stg_errore")} ${esc(STG.errore)}</div>`
+      : lista.length ? `<div class="griglia poster">${lista.map(cardStagione).join("")}</div>` : `<div class="vuoto">${t_("m_nessuno_filtro")}</div>`}`;
+}
+
+function cardStagione(v){
+  const st = v.in_lista ? v.in_lista.stato : "";
+  const membri = v.membri >= 1000 ? Math.round(v.membri / 1000) + "k" : v.membri;
+  const dati = esc(JSON.stringify(v));
+  return `<div class="card ${st ? "st-" + st : ""}" style="${v.scartato ? "opacity:.45" : ""}" title="${esc(v.trama)}">
+    <div class="cop poster">${v.copertina ? `<img loading="lazy" src="${esc(v.copertina)}">` : ""}</div>
+    <div class="corpo">
+      <div class="nome" title="${esc(v.titolo)}">${esc(v.titolo)}</div>
+      <div class="meta">
+        <span class="t" style="color:var(--warn)">★ ${v.voto_mal ? v.voto_mal.toFixed(2) : "N/A"}</span>
+        <span class="t">👥 ${membri}</span><span class="t">${v.episodi || "?"} ${t_("ep")}</span>
+        ${st ? `<span class="t st-${st}">${t_("st_" + st)}</span>` : ""}
+      </div>
+      <div class="tenue" style="font-size:12px">${esc(v.generi.join(", "))}</div>
+      ${v.piattaforme.length ? `<div class="tenue" style="font-size:12px">📺 ${esc(v.piattaforme.join(", "))}</div>` : ""}
+      <div class="azioni">
+        ${st !== "in_corso" ? `<button class="b p" title="${t_("stg_guardo")}" onclick='sceltaStagione(${dati},"guarda")'>▶</button>` : ""}
+        ${!st ? `<button class="b" title="${t_("stg_pianifico")}" onclick='sceltaStagione(${dati},"pianifica")'>📌</button>` : ""}
+        ${!st ? (v.scartato ? `<button class="b" title="${t_("stg_ripristina")}" onclick='sceltaStagione(${dati},"ripristina")'>↺</button>`
+                            : `<button class="b k elim" title="${t_("stg_scarta")}" onclick='sceltaStagione(${dati},"scarta")'>✕</button>`) : ""}
+      </div>
+    </div></div>`;
+}
+
+async function sceltaStagione(voce, azione){
+  await api("/api/media/stagione/scelta", {voce, azione});
+  const r = await api(`/api/media/stagione?anno=${STG.anno}&stagione=${STG.stagione}`);
+  if (!r.errore) STG.voci = r.voci;
+  await caricaMedia();
+  disegnaNav();
+  disegnaStagione();
+  if (azione === "guarda" || azione === "pianifica") toast(`${azione === "guarda" ? "▶" : "📌"} ${voce.titolo}`);
 }

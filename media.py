@@ -464,6 +464,8 @@ def importa_animeunity(records):
             t = per_au.get(au_id)
             if t and (t.get("aggiornato") or "") >= aggiornato:
                 invariati += 1                          # modificato nel Gestore dopo l'ultima modifica sul sito
+                if r.get("mal_id") and not t.get("mal_id"):
+                    t["mal_id"] = str(r["mal_id"])
                 continue
             nomi = [x for x in (r.get("title_eng"), r.get("title"), r.get("title_it")) if x]
             stagione = nuova_stagione(1, totali, stato)
@@ -478,6 +480,7 @@ def importa_animeunity(records):
                 "anno": r.get("date"), "copertina": r.get("imageurl"), "trama": (r.get("plot") or "")[:600],
                 "alias": list(dict.fromkeys(nomi)), "voto": p.get("score") or None,
                 "preferito": bool(p.get("favorite")), "stagioni": [stagione],
+                "mal_id": str(r["mal_id"]) if r.get("mal_id") else None,
             }
             if t:
                 t.update({k: v for k, v in scheda.items() if k not in ("alias",)})
@@ -492,3 +495,118 @@ def importa_animeunity(records):
             t["aggiornato"] = aggiornato
         salva(d)
     return {"nuovi": nuovi, "aggiornati": aggiornati, "invariati": invariati, "totale": len(records)}
+
+
+# ================================================================ stagione di MyAnimeList (anime per voto)
+
+STAGIONI = ["winter", "spring", "summer", "fall"]
+CACHE_STAGIONI = BASE / "stagioni_cache"
+
+
+def stagione_attuale_mal(oggi=None):
+    oggi = oggi or date.today()
+    return oggi.year, STAGIONI[(oggi.month - 1) // 3]
+
+
+def stagione_vicina(anno, stagione, passo):
+    i = STAGIONI.index(stagione) + passo
+    return anno + i // 4, STAGIONI[i % 4]
+
+
+def _testo_html(s):
+    import html as _html
+    return re.sub(r"\s+", " ", _html.unescape(re.sub(r"<[^>]+>", " ", s or ""))).strip()
+
+
+def leggi_stagione_mal(anno, stagione, forza=False):
+    """Anime della stagione dalla pagina di MyAnimeList (con cache di 6 ore)."""
+    CACHE_STAGIONI.mkdir(exist_ok=True)
+    f = CACHE_STAGIONI / f"{anno}-{stagione}.json"
+    if f.exists() and not forza and time.time() - f.stat().st_mtime < 6 * 3600:
+        return json.loads(f.read_text(encoding="utf-8"))
+    r = requests.get(f"https://myanimelist.net/anime/season/{anno}/{stagione}",
+                     headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:130.0) Gecko/20100101 Firefox/130.0"},
+                     timeout=60)
+    r.raise_for_status()
+    out, visti = [], set()
+    # la pagina è divisa in sezioni: TV (New), TV (Continuing), ONA, OVA, Movie, Special
+    pezzi = re.split(r'<div class="anime-header">([^<]+)</div>', r.text)
+    for k in range(1, len(pezzi), 2):
+        sezione, contenuto = pezzi[k].strip(), pezzi[k + 1]
+        for blocco in contenuto.split('class="js-anime-category-producer seasonal-anime js-seasonal-anime')[1:]:
+            m = re.search(r'href="https://myanimelist\.net/anime/(\d+)/', blocco)
+            if not m or m.group(1) in visti:
+                continue
+            visti.add(m.group(1))
+            prendi = lambda cls: (re.search(rf'class="{cls}">([^<]*)<', blocco) or [None, ""])[1].strip()
+            voto = prendi("js-score")
+            ep = re.search(r"<span>(\d+|\?) eps?</span>", blocco)
+            img = re.search(r'<img[^>]+(?:data-src|src)="(https://cdn\.myanimelist\.net/[^"]+)"', blocco)
+            piattaforme = []
+            raw = re.search(r"data-raw='(\{.*?\})'", blocco, re.S)
+            if raw:
+                try:
+                    piattaforme = [p["platform"]["name"] for p in json.loads(raw.group(1)).get("data", []) if p.get("available")]
+                except Exception:
+                    pass
+            out.append({
+                "mal_id": m.group(1), "titolo": prendi("js-title") or "?", "sezione": sezione,
+                "voto_mal": float(voto) if re.fullmatch(r"\d+(\.\d+)?", voto) and float(voto) > 0 else None,
+                "membri": int(prendi("js-members") or 0), "inizio": prendi("js-start_date"),
+                "episodi": int(ep.group(1)) if ep and ep.group(1).isdigit() else None,
+                "generi": [_testo_html(g) for g in re.findall(r'<span class="genre">\s*<a[^>]*>(.*?)</a>', blocco)][:4],
+                "copertina": img.group(1) if img else None,
+                "trama": _testo_html((re.search(r'<p class="preline">(.*?)</p>', blocco, re.S) or [None, ""])[1])[:500],
+                "piattaforme": list(dict.fromkeys(piattaforme))[:4],
+            })
+    f.write_text(json.dumps(out, ensure_ascii=False), encoding="utf-8")
+    return out
+
+
+def stagione_per_interfaccia(anno, stagione, forza=False):
+    voci = leggi_stagione_mal(anno, stagione, forza)
+    d = carica()
+    per_mal = {str(t.get("mal_id")): t for t in d["titoli"] if t.get("mal_id")}
+    scartati = set(d.get("stagione_scartati", []))
+    for v in voci:
+        t = per_mal.get(v["mal_id"])
+        if t is None:
+            t, punti = abbina(d, v["titolo"], "anime")
+            t = t if punti >= 0.95 else None
+        v["in_lista"] = {"id": t["id"], "stato": t["stato"]} if t else None
+        v["scartato"] = v["mal_id"] in scartati
+    vista = f"{anno}-{stagione}"
+    if vista not in d.get("stagioni_viste", []):
+        d.setdefault("stagioni_viste", []).append(vista)
+        salva(d)
+    return {"anno": anno, "stagione": stagione, "voci": voci}
+
+
+def scelta_stagione(voce, azione):
+    """▶ guarda / 📌 pianifica / ✕ scarta / ripristina, per un anime della pagina stagionale."""
+    if azione in ("scarta", "ripristina"):
+        with _lock:
+            d = carica()
+            s = set(d.get("stagione_scartati", []))
+            (s.add if azione == "scarta" else s.discard)(str(voce["mal_id"]))
+            d["stagione_scartati"] = sorted(s)
+            salva(d)
+        return {"ok": True}
+    stato = "in_corso" if azione == "guarda" else "da_vedere"
+    esistente = (voce.get("in_lista") or {}).get("id")
+    if not esistente:
+        t = aggiungi({"categoria": "anime", "tipo": "film" if voce.get("sezione") == "Movie" else "serie",
+                      "titolo": voce["titolo"], "fonte": "mal", "fonte_id": str(voce["mal_id"]),
+                      "anno": (voce.get("inizio") or "")[:4] or None, "copertina": voce.get("copertina"),
+                      "trama": voce.get("trama", ""), "alias": [voce["titolo"]],
+                      "stagioni": [{"numero": 1, "episodi_totali": voce.get("episodi")}]})
+        esistente = t["id"]
+        with _lock:
+            d = carica()
+            for x in d["titoli"]:
+                if x["id"] == esistente:
+                    x["mal_id"] = str(voce["mal_id"])
+            salva(d)
+    t = trova(carica(), esistente)
+    numero = (stagione_attuale(t) or {}).get("numero", 1)
+    return modifica(esistente, {"stagione": numero, "stato": stato})

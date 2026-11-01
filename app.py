@@ -450,6 +450,23 @@ def api_media_conferma(voce):
     return jsonify(media.conferma(voce, j.get("id"), j.get("scheda")) or {"ok": False})
 
 
+@app.get("/api/media/stagione")
+def api_stagione_mal():
+    anno, stagione = media.stagione_attuale_mal()
+    if request.args.get("anno") and request.args.get("stagione") in media.STAGIONI:
+        anno, stagione = int(request.args["anno"]), request.args["stagione"]
+    try:
+        return jsonify(media.stagione_per_interfaccia(anno, stagione, forza=request.args.get("forza") == "1"))
+    except Exception as e:
+        return jsonify(errore=str(e), anno=anno, stagione=stagione), 502
+
+
+@app.post("/api/media/stagione/scelta")
+def api_stagione_mal_scelta():
+    j = request.json or {}
+    return jsonify(media.scelta_stagione(j["voce"], j["azione"]) or {"ok": False})
+
+
 @app.post("/api/media/importa_animeunity")
 def api_importa_animeunity():
     url = (request.json or {}).get("url", "").strip()

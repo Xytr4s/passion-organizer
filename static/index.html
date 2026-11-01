@@ -710,6 +710,7 @@ async function esci(){ if (confirm(t("esci_conferma"))) { await api("/api/esci",
   const [a, b] = location.hash.slice(1).split("/");
   if (VISTE.includes(a)) { sezione = "giochi"; vista = a; }
   else if (["serie","film","anime","impostazioni"].includes(a)) sezione = a;
+  if (a === "anime" && b === "stagione") window._apriStagione = true;
   else if (a === "giochi" && VISTE.includes(b)) vista = b;
 })();
 caricaMedia().catch(()=>{}).finally(() => carica().then(controllaStato));
