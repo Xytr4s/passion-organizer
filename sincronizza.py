@@ -16,7 +16,9 @@ import requests
 
 import media
 
-BASE = Path(__file__).resolve().parent
+import percorsi
+
+BASE = percorsi.DATI          # dati dell'utente (cartella del progetto, o %LOCALAPPDATA% per il .exe)
 CONFIG = BASE / "telefono.json"      # url dello script, codice segreto, esito ultima sincronizzazione
 _evento = threading.Event()
 _lock = threading.Lock()

@@ -4,6 +4,7 @@ let SETUP = {cartelle: [], scelte: new Set(), steam: 0};
 
 async function mostraBenvenuto(){
   if (!LINGUA_SCELTA_BENVENUTO) LINGUA = (navigator.language || "en").toLowerCase().startsWith("it") ? "it" : "en";
+  disegna();                                            // anche menu e filtri nella lingua rilevata
   modale(`<h2 style="margin-top:0">✨ ${t("bv_titolo")}</h2><p class="tenue">${t("bv_cerco")}</p>`);
   const r = await api("/api/setup/suggerimenti");
   SETUP.cartelle = r.cartelle; SETUP.steam = r.steam;
@@ -17,7 +18,7 @@ function disegnaBenvenuto(){
   box.onclick = null;                                  // la configurazione non si chiude cliccando fuori
   modale(`<h2 style="margin-top:0">✨ ${t("bv_titolo")}</h2>
     <p>${t("bv_intro")}</p>
-    <div class="riga">🌐 <select onchange="LINGUA=this.value;LINGUA_SCELTA_BENVENUTO=true;disegnaBenvenuto()">
+    <div class="riga">🌐 <select onchange="LINGUA=this.value;LINGUA_SCELTA_BENVENUTO=true;disegna();disegnaBenvenuto()">
       ${Object.entries(LINGUE).map(([k, n]) => `<option value="${k}" ${LINGUA === k ? "selected" : ""}>${n}</option>`).join("")}</select></div>
     <h3>🎮 ${t("bv_cartelle")}</h3>
     <p class="tenue">${t("bv_cartelle_info")}</p>

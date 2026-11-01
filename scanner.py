@@ -9,7 +9,9 @@ import time
 from difflib import SequenceMatcher
 from pathlib import Path
 
-BASE = Path(__file__).resolve().parent
+import percorsi
+
+BASE = percorsi.DATI          # dati dell'utente (cartella del progetto, o %LOCALAPPDATA% per il .exe)
 CONFIG_FILE = BASE / "config.json"
 DATI_FILE = BASE / "dati.json"
 

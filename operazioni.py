@@ -9,7 +9,9 @@ import threading
 import time
 from pathlib import Path
 
-BASE = Path(__file__).resolve().parent
+import percorsi
+
+BASE = percorsi.DATI          # dati dell'utente (cartella del progetto, o %LOCALAPPDATA% per il .exe)
 REGISTRO = BASE / "registro.json"
 NOME_CESTINO = "_DaEliminare"
 

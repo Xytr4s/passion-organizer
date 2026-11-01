@@ -19,13 +19,16 @@ from flask import Flask, jsonify, request, send_from_directory
 import operazioni
 import scanner
 
-BASE = Path(__file__).resolve().parent
+import percorsi
+
+BASE = percorsi.DATI            # dati dell'utente
+RISORSE = percorsi.RISORSE      # file del programma (interfaccia, modelli)
 PORTA = 5577
 COPERTINE_FILE = BASE / "copertine.json"
 VOTI_FILE = BASE / "voti.json"   # chiave del gioco -> "bello" | "sufficiente" | "brutto" | "nessuno"
 VOTI = ("bello", "sufficiente", "brutto")
 
-app = Flask(__name__, static_folder=str(BASE / "static"))
+app = Flask(__name__, static_folder=str(RISORSE / "static"))
 
 
 # ---------------------------------------------------------------- dati
@@ -415,8 +418,8 @@ def _dopo_modifica(risposta):
 @app.get("/api/telefono")
 def api_telefono():
     cfg = sincronizza.carica_config()
-    codice = (BASE / "telefono" / "Codice.gs").read_text(encoding="utf-8").replace("__TOKEN__", cfg["token"])
-    pagina = (BASE / "telefono" / "Pagina.html").read_text(encoding="utf-8")
+    codice = (RISORSE / "telefono" / "Codice.gs").read_text(encoding="utf-8").replace("__TOKEN__", cfg["token"])
+    pagina = (RISORSE / "telefono" / "Pagina.html").read_text(encoding="utf-8")
     link = f"{cfg['url']}?token={cfg['token']}" if cfg.get("url") else ""
     return jsonify(url=cfg.get("url", ""), ultima=cfg.get("ultima"), esito=cfg.get("esito"), link=link,
                    codice=codice, pagina=pagina)
@@ -627,7 +630,11 @@ def imposta_avvio_automatico(attivo):
         "$s.WorkingDirectory = $env:DIR; $s.Description = 'PassionOrganizer';"
         "$s.IconLocation = \"$env:SystemRoot\\System32\\imageres.dll,186\"; $s.Save()"
     )
-    env = dict(os.environ, LNK=str(lnk), PYW=str(pythonw), APP=str(BASE / "app.py"), DIR=str(BASE))
+    if percorsi.CONGELATO:
+        ps = ps.replace("'\"' + $env:APP + '\" --avvio'", "'--avvio'")
+        env = dict(os.environ, LNK=str(lnk), PYW=str(percorsi.ESEGUIBILE), APP="", DIR=str(percorsi.ESEGUIBILE.parent))
+    else:
+        env = dict(os.environ, LNK=str(lnk), PYW=str(pythonw), APP=str(RISORSE / "app.py"), DIR=str(RISORSE))
     subprocess.run(["powershell", "-NoProfile", "-Command", ps], env=env, check=True, timeout=30,
                    creationflags=subprocess.CREATE_NO_WINDOW)
 

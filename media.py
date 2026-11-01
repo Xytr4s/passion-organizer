@@ -15,7 +15,9 @@ from pathlib import Path
 
 import requests
 
-BASE = Path(__file__).resolve().parent
+import percorsi
+
+BASE = percorsi.DATI          # dati dell'utente (cartella del progetto, o %LOCALAPPDATA% per il .exe)
 FILE = BASE / "media.json"
 STATI = ("in_corso", "da_vedere", "in_pausa", "completata", "droppata")
 _lock = threading.Lock()
