@@ -304,7 +304,8 @@ def analizza_pagina(titolo_pagina, url="", nome_sito=""):
     """Dal titolo della scheda e dall'indirizzo ricava (titolo, stagione, episodio)."""
     testo = f"{titolo_pagina} {url.replace('-', ' ').replace('_', ' ').replace('/', ' ')}"
     stagione = episodio = None
-    for pat in (r"\bS(\d{1,2})\s*E(\d{1,4})\b", r"\b(\d{1,2})x(\d{1,4})\b",
+    # S2E4, S02 E04, S2:E4, S2.E4, S2-E4, S2 - E4
+    for pat in (r"\bS(\d{1,2})\s*[:.\-_]?\s*E(\d{1,4})\b", r"\b(\d{1,2})x(\d{1,4})\b",
                 r"stagione\s*(\d{1,2}).{0,20}?episodio\s*(\d{1,4})", r"season\s*(\d{1,2}).{0,20}?episode\s*(\d{1,4})"):
         m = re.search(pat, testo, re.I)
         if m:
@@ -322,7 +323,7 @@ def analizza_pagina(titolo_pagina, url="", nome_sito=""):
     t = titolo_pagina
     if nome_sito:
         t = re.sub(re.escape(nome_sito), " ", t, flags=re.I)
-    t = re.split(r"\bS\d{1,2}\s*E\d|\b\d{1,2}x\d|\b(?:stagione|season|episodio|episode|ep)\b\.?\s*\d", t, flags=re.I)[0]
+    t = re.split(r"\bS\d{1,2}\s*[:.\-_]?\s*E\d|\b\d{1,2}x\d|\b(?:stagione|season|episodio|episode|ep)\b\.?\s*\d", t, flags=re.I)[0]
     pezzi = [p.strip() for p in re.split(r"\s[|–—-]\s|\s·\s", t) if p.strip()]
     t = max(pezzi, key=len) if pezzi else t
     t = RUMORE_TITOLO.sub(" ", t)
