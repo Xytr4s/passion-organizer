@@ -636,9 +636,19 @@ def elenco_stagioni(dal=2020, future=4):
     return out
 
 
+PRIMO_ANNO_MAL = 1917     # le pagine stagionali di MyAnimeList partono da qui (molte annate antiche sono quasi vuote)
+
+
+def ordine_scaricamento():
+    """Prima le stagioni dal 2020 (più le future), poi a ritroso dal 2019 fino al 1917."""
+    recenti = elenco_stagioni(2020)
+    storiche = [x for x in elenco_stagioni(PRIMO_ANNO_MAL, future=0) if x[0] < 2020]
+    return recenti + list(reversed(storiche))
+
+
 def scarica_archivio(pausa=15):
     """In background: scarica le stagioni mancanti, una ogni `pausa` secondi (gentile con MyAnimeList)."""
-    elenco = elenco_stagioni()
+    elenco = ordine_scaricamento()
     ARCHIVIO.update(in_corso=True, totale=len(elenco), errore=None)
     try:
         for i, (a, st) in enumerate(elenco):
@@ -663,7 +673,7 @@ def archivio_per_interfaccia():
     per_mal = {str(t.get("mal_id")): t for t in d["titoli"] if t.get("mal_id")}
     scartati = set(d.get("stagione_scartati", []))
     voci, visti, scaricate = [], {}, 0
-    for a, st in elenco_stagioni(future=0):
+    for a, st in elenco_stagioni(PRIMO_ANNO_MAL, future=0):
         f = CACHE_STAGIONI / f"{a}-{st}.json"
         if not f.exists():
             continue
@@ -683,4 +693,5 @@ def archivio_per_interfaccia():
             v["scartato"] = v["mal_id"] in scartati
             visti[v["mal_id"]] = v
             voci.append(v)
-    return {"voci": voci, "scaricate": scaricate, "totale": len(elenco_stagioni(future=0)), **{"scaricamento": dict(ARCHIVIO)}}
+    return {"voci": voci, "scaricate": scaricate, "totale": len(elenco_stagioni(PRIMO_ANNO_MAL, future=0)),
+            "scaricamento": dict(ARCHIVIO)}

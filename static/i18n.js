@@ -403,12 +403,12 @@ Object.assign(TESTI.en, {
 
 // ---------------------------------------------------------------- archivio stagioni
 Object.assign(TESTI.it, {
-  stg_archivio: "Dal 2020", stg_tutti_anni: "Tutti gli anni",
-  stg_archivio_progresso: "Scarico l'archivio da MyAnimeList: {n} stagioni su {tot}. Riapri “Dal 2020” tra qualche minuto per vederle tutte.",
+  stg_archivio: "Archivio", stg_tutti_anni: "Tutti gli anni",
+  stg_archivio_progresso: "Scarico l'archivio da MyAnimeList: {n} stagioni su {tot} (prima dal 2020, poi a ritroso verso il passato, una ogni 15 secondi mentre il Gestore è aperto).",
 });
 Object.assign(TESTI.en, {
-  stg_archivio: "Since 2020", stg_tutti_anni: "All years",
-  stg_archivio_progresso: "Downloading the archive from MyAnimeList: {n} of {tot} seasons. Reopen “Since 2020” in a few minutes to see them all.",
+  stg_archivio: "Archive", stg_tutti_anni: "All years",
+  stg_archivio_progresso: "Downloading the archive from MyAnimeList: {n} of {tot} seasons (first since 2020, then backwards into the past, one every 15 seconds while the app is open).",
 });
 
 // ---------------------------------------------------------------- stagioni future

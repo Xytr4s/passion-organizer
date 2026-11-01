@@ -468,7 +468,7 @@ def api_stagioni_archivio():
 
 @app.get("/api/media/stagioni/elenco")
 def api_stagioni_elenco():
-    return jsonify([{"anno": a, "stagione": s} for a, s in media.elenco_stagioni()])
+    return jsonify([{"anno": a, "stagione": s} for a, s in media.elenco_stagioni(media.PRIMO_ANNO_MAL)])
 
 
 @app.post("/api/media/stagione/scelta")
