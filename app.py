@@ -588,7 +588,7 @@ def api_estensione_ping():
 def api_estensione_analizza():
     """Cosa riconosce l'estensione in una pagina, senza salvare nulla."""
     j = request.get_json(force=True, silent=True) or {}
-    titolo, stagione, ep = media.analizza_pagina(j.get("titolo", ""), j.get("url", ""), j.get("sito", ""))
+    titolo, stagione, ep = media.analizza_dati(j)
     if j.get("categoria") == "film" and titolo:
         stagione, ep = 1, 1
     try:          # solo sul PC dell'utente, per capire i siti che non vengono riconosciuti

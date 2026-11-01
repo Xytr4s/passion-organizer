@@ -300,8 +300,27 @@ RUMORE_TITOLO = re.compile(
     r"episodio|episode|ep|stagione|season|serie ?tv|anime|film|movie|in|su|on)\b", re.I)
 
 
+def analizza_dati(j):
+    """Come analizza_pagina, sui dati mandati dall'estensione. Se titolo della scheda e indirizzo non dicono
+    l'episodio, prova i titoli visibili nella pagina (es. Deltabit: titolo della scheda generico, episodio nel
+    titolo sopra il video "IT_Welcome_to_Derry_s01e08_Subbed_iTA")."""
+    titolo, url, sito = j.get("titolo", ""), j.get("url", ""), j.get("sito", "")
+    risultato = analizza_pagina(titolo, url, sito)
+    if risultato[2] is None:
+        d = j.get("diagnostica") or {}
+        for campo in ("player", "h1", "h2", "og"):
+            testo = (d.get(campo) or "").strip()
+            if not testo:
+                continue
+            altro = analizza_pagina(testo, url, sito)
+            if altro[2] is not None and altro[0]:
+                return altro
+    return risultato
+
+
 def analizza_pagina(titolo_pagina, url="", nome_sito=""):
     """Dal titolo della scheda e dall'indirizzo ricava (titolo, stagione, episodio)."""
+    titolo_pagina = (titolo_pagina or "").replace("_", " ")   # nomi di file: "Serie_s01e08_iTA"
     testo = f"{titolo_pagina} {url.replace('-', ' ').replace('_', ' ').replace('/', ' ')}"
     stagione = episodio = None
     # parametri espliciti nell'indirizzo: "?season=1&episode=3" (1Shows), "?stagione=2&episodio=5"
@@ -369,7 +388,7 @@ def abbina(d, titolo, categoria=None):
 def da_estensione(dati_pagina):
     """Chiamato dall'estensione di Firefox quando hai guardato un episodio.
     dati_pagina: {titolo, url, sito, categoria, automatico}"""
-    titolo, stagione, ep = analizza_pagina(dati_pagina.get("titolo", ""), dati_pagina.get("url", ""), dati_pagina.get("sito", ""))
+    titolo, stagione, ep = analizza_dati(dati_pagina)
     categoria = dati_pagina.get("categoria")
     if categoria == "film" and titolo:
         stagione, ep = 1, 1                          # un film è un solo "episodio": guardato = visto
