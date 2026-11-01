@@ -304,9 +304,18 @@ def analizza_pagina(titolo_pagina, url="", nome_sito=""):
     """Dal titolo della scheda e dall'indirizzo ricava (titolo, stagione, episodio)."""
     testo = f"{titolo_pagina} {url.replace('-', ' ').replace('_', ' ').replace('/', ' ')}"
     stagione = episodio = None
+    # parametri espliciti nell'indirizzo: "?season=1&episode=3" (1Shows), "?stagione=2&episodio=5"
+    from urllib.parse import urlsplit, parse_qs
+    q = {k.lower(): v[0] for k, v in parse_qs(urlsplit(url).query).items() if v}
+    s_q = next((q[k] for k in ("season", "stagione", "s") if q.get(k, "").isdigit()), None)
+    e_q = next((q[k] for k in ("episode", "episodio", "ep", "e") if q.get(k, "").isdigit()), None)
+    if e_q:
+        stagione, episodio = (int(s_q) if s_q else None), int(e_q)
     # S2E4, S02 E04, S2:E4, S2.E4, S2-E4, S2 - E4; "Season 4, Ep. 2", "Stagione 4 ep. 2", "St. 4 Ep. 2" (Prime Video)
     for pat in (r"\bS(\d{1,2})\s*[:.\-_]?\s*E(\d{1,4})\b", r"\b(\d{1,2})x(\d{1,4})\b",
                 r"\b(?:stagione|season|st)\.?\s*(\d{1,2}).{0,20}?\b(?:episodio|episode|ep)\.?\s*(\d{1,4})\b"):
+        if episodio is not None:
+            break
         m = re.search(pat, testo, re.I)
         if m:
             stagione, episodio = int(m.group(1)), int(m.group(2))
