@@ -56,7 +56,8 @@ function unisci_(daPc, dalFoglio, eliminati) {
 }
 
 function verifica_(t) {
-  if (!TOKEN || TOKEN === "__TOKEN__" || t !== TOKEN) throw new Error("codice di accesso non valido");
+  // il segnaposto è spezzato in due così PassionOrganizer sostituisce solo quello di TOKEN, in cima al file
+  if (!TOKEN || TOKEN === "__" + "TOKEN__" || t !== TOKEN) throw new Error("codice di accesso non valido");
 }
 
 function json_(o) {
