@@ -7,6 +7,22 @@ in ordine — e tiene traccia di **serie TV, film e anime** che guardi, con un'e
 
 📖 **Guida completa nella [wiki](https://github.com/Xytr4s/passion-organizer/wiki)** (in inglese).
 
+## ⬇ Scarica
+
+**[Scarica PassionOrganizer.exe](https://github.com/Xytr4s/passion-organizer/releases/latest)** — un solo file, niente installazione, niente Python (Windows 10/11).
+Doppio clic: una breve configurazione trova le cartelle dei giochi. I dati vengono salvati in `%LOCALAPPDATA%\PassionOrganizer`.
+
+> **"Windows ha protetto il PC"?** L'app non ha una firma digitale (i certificati sono a pagamento), quindi al primo avvio
+> SmartScreen può avvisare: premi **Ulteriori informazioni → Esegui comunque**. Anche qualche antivirus può segnalare per
+> prudenza i programmi creati con PyInstaller: tutto il codice sorgente è qui da controllare.
+
+| | |
+|---|---|
+| ![Giochi](docs_img/games.png) | ![Stagione anime](docs_img/season.png) |
+| **Giochi** — tutti i dischi in un'unica libreria; colore della cornice = installer di backup, forma = il tuo voto | **Stagioni anime** — stagione di MyAnimeList per voto: ▶ guardo, 📌 pianifico, ✕ salto |
+| ![Serie TV](docs_img/series.png) | ![Configurazione](docs_img/setup.png) |
+| **Serie TV** — stagioni, episodi, completate / droppate all'episodio N | **Primo avvio** — lingua e cartelle dei giochi trovate in automatico |
+
 ## Sezioni (barra laterale)
 
 | Sezione | Cosa fa |
@@ -50,7 +66,7 @@ dai prefissi delle cartelle in `__ins` (`x0235 …` = bello, `L0236 …` = brutt
 - "Metti da parte" sposta in `X:\_DaEliminare` sullo stesso disco. L'eliminazione definitiva richiede di scrivere **ELIMINA**.
 - I giochi **Steam** non vengono mai spostati né cancellati dall'app. Radici dei dischi e cartelle principali sono protette.
 
-## Installazione
+## Avvio dal codice sorgente
 
 Al primo avvio una **configurazione guidata** chiede la lingua e trova da sola le cartelle dei giochi (oppure scegli
 "non ho giochi, solo serie/film/anime").
@@ -75,6 +91,12 @@ L'interfaccia è disponibile in **italiano** e **inglese** (*Impostazioni → Li
 | `static/` | Interfaccia (`index.html`, `media.js`, `telefono.js`, `benvenuto.js`, `i18n.js`) |
 | `estensione-firefox/` | Estensione per Firefox |
 | `telefono/` | Script di Google Apps Script e pagina per il telefono |
+
+Per creare tu l'`.exe`: `pip install pyinstaller`, poi `crea_exe.bat` → `dist\PassionOrganizer.exe`.
+
+## Licenza
+
+[MIT](LICENSE) — libero di usarlo, modificarlo e condividerlo.
 
 File di dati locali (non nel repo): `dati.json`, `media.json`, `voti.json`, `telefono.json`, `config.json`, `copertine.json`,
 `registro.json`, `eliminati.json`, `app.log`.

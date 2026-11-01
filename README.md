@@ -7,6 +7,22 @@ library and keeps it tidy — and tracks the **TV series, movies and anime** you
 
 📖 **Full guide in the [wiki](https://github.com/Xytr4s/passion-organizer/wiki).**
 
+## ⬇ Download
+
+**[Download PassionOrganizer.exe](https://github.com/Xytr4s/passion-organizer/releases/latest)** — one file, no installation, no Python needed (Windows 10/11).
+Double-click it: a short setup finds your game folders. Your data is stored in `%LOCALAPPDATA%\PassionOrganizer`.
+
+> **"Windows protected your PC"?** The app isn't digitally signed (signing certificates are paid), so SmartScreen may warn
+> on first launch: click **More info → Run anyway**. Some antivirus tools also flag apps built with PyInstaller by caution;
+> the full source code is here to check.
+
+| | |
+|---|---|
+| ![Games](docs_img/games.png) | ![Anime season](docs_img/season.png) |
+| **Games** — every drive in one library; frame color = backup installer, shape = your rating | **Anime seasons** — MyAnimeList season by score: ▶ watch, 📌 plan, ✕ skip |
+| ![TV series](docs_img/series.png) | ![Setup](docs_img/setup.png) |
+| **TV series** — seasons, episodes, completed / dropped at episode N | **First launch** — language and game folders found automatically |
+
 ## Sections (left sidebar)
 
 | Section | What it does |
@@ -50,7 +66,7 @@ prefixes in `__ins` (`x0235 …` = good, `L0236 …` = bad); **⭐ Rate unrated 
 - "Set aside" moves to `X:\_DaEliminare` on the same drive. Permanent deletion requires typing **ELIMINA**.
 - **Steam** games are never moved or deleted by the app. Drive roots and main game folders are protected.
 
-## Installation
+## Run from source
 
 On first launch a **setup wizard** asks for the language and finds your game folders automatically (or choose
 "no games, only series/movies/anime").
@@ -75,6 +91,12 @@ The interface is available in **Italian** and **English** (*Settings → Languag
 | `static/` | Interface (`index.html`, `media.js`, `telefono.js`, `benvenuto.js`, `i18n.js`) |
 | `estensione-firefox/` | Firefox extension |
 | `telefono/` | Google Apps Script and phone page |
+
+To build the `.exe` yourself: `pip install pyinstaller`, then run `crea_exe.bat` → `dist\PassionOrganizer.exe`.
+
+## License
+
+[MIT](LICENSE) — free to use, modify and share.
 
 Local data files (not in the repo): `dati.json`, `media.json`, `voti.json`, `telefono.json`, `config.json`, `copertine.json`,
 `registro.json`, `eliminati.json`, `app.log`.

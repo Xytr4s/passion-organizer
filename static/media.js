@@ -70,7 +70,7 @@ function disegnaMedia(categoria){
 function cardMedia(x){
   const s = stagioneAttuale(x);
   const perc = s && s.episodi_totali ? Math.min(100, s.visti / s.episodi_totali * 100) : (x.stato==="completata"?100:0);
-  const puo1 = s && x.tipo !== "film" && !(s.episodi_totali && s.visti >= s.episodi_totali);
+  const puo1 = s && x.tipo !== "film" && s.stato !== "completata" && !(s.episodi_totali && s.visti >= s.episodi_totali);
   const iniz = esc(x.titolo.split(/\s+/).slice(0,2).map(w=>w[0]).join("").toUpperCase());
   return `<div class="card st-${x.stato}" onclick="dettaglioMedia('${x.id}')">
     <div class="cop poster">${iniz}${x.copertina?`<img loading="lazy" src="${esc(x.copertina)}" onerror="this.remove()">`:""}</div>
