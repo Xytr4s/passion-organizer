@@ -245,7 +245,8 @@ function card(g){
         : `<span class="t forse" title="${tt(s)}">${t("installer_simile",{nome:esc(s[0].nome)})}</span>`;
     } else etichettaInst = `<span class="t nomatch">${t(isInst(g)?"non_installato":"nessun_installer")}</span>`;
   }
-  const stileVoto = g.voto ? bordoVoto(g.voto, COLORI_CORNICE[cornice] || COLORI_CORNICE[""]) : "";
+  const coloreVoto = g.voto === "brutto" ? "#ff6b6b" : (COLORI_CORNICE[cornice] || COLORI_CORNICE[""]);
+  const stileVoto = g.voto ? bordoVoto(g.voto, coloreVoto) : "";
   return `<div class="card ${cornice}" style="${stileVoto}" onclick="dettaglio('${g.id}')">
     ${copertina(g)}
     <div class="corpo">
@@ -293,7 +294,67 @@ function barraFiltri(){
     <select onchange="F.voto=this.value;aggiornaGriglia()">${opzioni([["","f_voto_tutti"],["bello","f_voto_bello"],["sufficiente","f_voto_sufficiente"],["brutto","f_voto_brutto"],["senza","f_voto_senza"]], F.voto)}</select>
     <select onchange="F.ord=this.value;aggiornaGriglia()">${opzioni([["nome","o_nome"],["dim","o_dim"],["data","o_data"],["disco","o_disco"]], F.ord)}</select>
     <span class="tenue" id="conteggio"></span>
+    ${vista !== "installer" && daVotare().length ? `<button class="b p" onclick="votaInSequenza()">⭐ ${t("vota_coda", {n: daVotare().length})}</button>` : ""}
   </div>`;
+}
+
+// ------------------------------------------------------------ votare in sequenza i giochi senza voto
+function daVotare(){
+  return D.giochi.filter(g => !g.voto && !isInst(g) && g.tipo !== "vuoto")
+    .sort((a, b) => (b.recente - a.recente) || ((b.ordine || 0) - (a.ordine || 0)) || a.nome.localeCompare(b.nome));
+}
+let CODA = [], posCoda = 0, votatiCoda = 0;
+function votaInSequenza(){
+  CODA = daVotare(); posCoda = 0; votatiCoda = 0;
+  document.addEventListener("keydown", tastiCoda);
+  mostraCoda();
+}
+function mostraCoda(){
+  if (posCoda >= CODA.length) {
+    modale(`<h2 style="margin-top:0">⭐ ${t("vota_fatto", {n: votatiCoda})}</h2>
+      <div class="riga" style="justify-content:flex-end"><button class="b p" onclick="chiudiCoda()">${t("chiudi")}</button></div>`);
+    return;
+  }
+  const g = CODA[posCoda];
+  modale(`<div class="tenue">${posCoda + 1} / ${CODA.length} · ${t("vota_votati", {n: votatiCoda})}</div>
+    <div class="barra" style="height:5px;margin:6px 0 12px"><div style="width:${posCoda / CODA.length * 100}%;background:var(--acc)"></div></div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+      <div style="width:300px">${copertina(g)}</div>
+      <div style="flex:1;min-width:220px">
+        <h2 style="margin:0 0 6px">${esc(g.nome)}</h2>
+        <div class="meta"><span class="t">${g.disco}</span><span class="t">${GB(g.dimensione)}</span>
+          ${g.versione ? `<span class="t">v${esc(g.versione)}</span>` : ""}${g.steam ? `<span class="t steam">Steam</span>` : ""}
+          ${g.recente ? `<span class="t rec">${t("recente")}${g.ordine ? " #" + g.ordine : ""}</span>` : ""}</div>
+        <div class="percorso" style="margin-top:6px">${esc(g.nome_cartella)}</div>
+      </div>
+    </div>
+    <div class="riga" style="margin-top:16px;gap:10px">
+      ${["bello","sufficiente","brutto"].map((v, i) => `<button class="b ${v === "brutto" ? "k" : "p"}" style="flex:1;padding:12px;font-size:16px" onclick="votoCoda('${v}')">${ICONA_VOTO[v]} ${t("voto_" + v)} <span class="tenue">(${i + 1})</span></button>`).join("")}
+    </div>
+    <div class="riga" style="justify-content:space-between">
+      <button class="b" ${posCoda ? "" : "disabled"} onclick="posCoda--;mostraCoda()">← ${t("vota_indietro")}</button>
+      <span class="tenue">${t("vota_tasti")}</span>
+      <button class="b" onclick="posCoda++;mostraCoda()">${t("vota_salta")} →</button>
+    </div>
+    <div class="riga" style="justify-content:flex-end"><button class="b" onclick="chiudiCoda()">${t("chiudi")}</button></div>`);
+}
+async function votoCoda(voto){
+  const g = CODA[posCoda];
+  await api("/api/voto/" + g.id, {voto});
+  D.giochi.filter(x => x.chiave === g.chiave).forEach(x => x.voto = voto);   // vale per tutte le copie
+  votatiCoda++; posCoda++; mostraCoda();
+}
+function tastiCoda(e){
+  if (document.getElementById("modale").style.display !== "flex" || !CODA.length) return;
+  const azione = {"1": "bello", "2": "sufficiente", "3": "brutto"}[e.key];
+  if (azione && posCoda < CODA.length) { e.preventDefault(); votoCoda(azione); }
+  else if (e.key === "ArrowRight" && posCoda < CODA.length) { posCoda++; mostraCoda(); }
+  else if (e.key === "ArrowLeft" && posCoda > 0) { posCoda--; mostraCoda(); }
+  else if (e.key === "Escape") chiudiCoda();
+}
+function chiudiCoda(){
+  document.removeEventListener("keydown", tastiCoda);
+  CODA = []; chiudiModale(); carica();
 }
 function griglia(lista){
   if (!lista.length) return `<div class="vuoto">${t("nessun_gioco")} ${D.giochi.length?"":t("premi_aggiorna")}</div>`;

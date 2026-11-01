@@ -354,3 +354,15 @@ Object.assign(TESTI.en, {
   tel_link_info: "Link to your private page (contains the secret code: don't share it):",
   tel_copiato: "Copied to clipboard", tel_in_corso: "Syncing…",
 });
+
+// ---------------------------------------------------------------- voto in sequenza
+Object.assign(TESTI.it, {
+  vota_coda: "Vota i giochi senza voto ({n})", vota_votati: "{n} votati in questa sessione",
+  vota_salta: "Salta", vota_indietro: "Indietro", vota_tasti: "Tastiera: 1 bello · 2 sufficiente · 3 brutto · → salta · ← indietro · Esc chiudi",
+  vota_fatto: "Fatto! {n} giochi votati",
+});
+Object.assign(TESTI.en, {
+  vota_coda: "Rate unrated games ({n})", vota_votati: "{n} rated this session",
+  vota_salta: "Skip", vota_indietro: "Back", vota_tasti: "Keyboard: 1 good · 2 okay · 3 bad · → skip · ← back · Esc close",
+  vota_fatto: "Done! {n} games rated",
+});
