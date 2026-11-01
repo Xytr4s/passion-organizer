@@ -7,3 +7,7 @@ eliminati.json
 config.json
 app.log
 __pycache__/
+media.json
+media.tmp
+estensione-firefox.zip
+*.xpi

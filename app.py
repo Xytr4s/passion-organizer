@@ -312,6 +312,99 @@ def api_fonti():
     return jsonify(ok=True)
 
 
+# ---------------------------------------------------------------- serie TV e anime
+
+import media
+
+
+@app.get("/api/media")
+def api_media():
+    return jsonify(media.carica())
+
+
+@app.get("/api/media/cerca")
+def api_media_cerca():
+    q, categoria = request.args.get("q", "").strip(), request.args.get("categoria", "serie")
+    if not q:
+        return jsonify([])
+    try:
+        return jsonify(media.cerca_anime(q) if categoria == "anime" else media.cerca_serie(q))
+    except Exception as e:
+        return jsonify({"errore": str(e)}), 502
+
+
+@app.post("/api/media/aggiungi")
+def api_media_aggiungi():
+    scheda = request.json
+    try:
+        scheda = media.scheda_completa(scheda)
+    except Exception:
+        pass  # senza rete: si aggiunge comunque con una stagione
+    return jsonify(media.aggiungi(scheda))
+
+
+@app.post("/api/media/<mid>/modifica")
+def api_media_modifica(mid):
+    t = media.modifica(mid, request.json)
+    return (jsonify(t), 200) if t else (jsonify(ok=False), 404)
+
+
+@app.post("/api/media/<mid>/episodio")
+def api_media_episodio(mid):
+    j = request.json or {}
+    return jsonify(media.episodio(mid, j.get("stagione"), int(j.get("delta", 1))))
+
+
+@app.post("/api/media/<mid>/stagione")
+def api_media_stagione(mid):
+    j = request.json or {}
+    if j.get("elimina"):
+        return jsonify(media.elimina_stagione(mid, j["elimina"]))
+    return jsonify(media.aggiungi_stagione(mid, j.get("episodi_totali")))
+
+
+@app.post("/api/media/<mid>/elimina")
+def api_media_elimina(mid):
+    media.elimina(mid)
+    return jsonify(ok=True)
+
+
+@app.post("/api/media/conferma/<voce>")
+def api_media_conferma(voce):
+    j = request.json or {}
+    if j.get("scarta"):
+        d = media.carica()
+        d["da_confermare"] = [x for x in d["da_confermare"] if x["id"] != voce]
+        media.salva(d)
+        return jsonify(ok=True)
+    return jsonify(media.conferma(voce, j.get("id"), j.get("scheda")) or {"ok": False})
+
+
+@app.route("/api/estensione", methods=["POST", "OPTIONS"])
+def api_estensione():
+    """Chiamata dall'estensione di Firefox (solo dal PC: il server ascolta su 127.0.0.1)."""
+    if request.method == "OPTIONS":
+        return ("", 204)
+    return jsonify(media.da_estensione(request.get_json(force=True, silent=True) or {}))
+
+
+@app.get("/api/estensione/ping")
+def api_estensione_ping():
+    return jsonify(ok=True, app="gestore-giochi")
+
+
+@app.post("/api/estensione/analizza")
+def api_estensione_analizza():
+    """Cosa riconosce l'estensione in una pagina, senza salvare nulla."""
+    j = request.get_json(force=True, silent=True) or {}
+    titolo, stagione, ep = media.analizza_pagina(j.get("titolo", ""), j.get("url", ""), j.get("sito", ""))
+    t, punti = media.abbina(media.carica(), titolo, j.get("categoria"))
+    trovato = t if t and punti >= 0.85 else None
+    return jsonify(titolo=titolo, stagione=stagione, episodio=ep,
+                   in_lista=trovato["titolo"] if trovato else None,
+                   visti=(media.stagione_attuale(trovato) or {}).get("visti") if trovato else None)
+
+
 # ---------------------------------------------------------------- avvio automatico con Windows
 
 def collegamento_avvio():

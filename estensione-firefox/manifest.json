@@ -1,0 +1,20 @@
+{
+  "manifest_version": 2,
+  "name": "Gestore Giochi – Tracker episodi",
+  "version": "1.0.0",
+  "description": "Segna nel Gestore Giochi gli episodi di serie TV e anime che guardi.",
+  "browser_specific_settings": {
+    "gecko": { "id": "tracker-episodi@gestore-giochi.local", "strict_min_version": "109.0" }
+  },
+  "icons": { "48": "icona.svg", "96": "icona.svg" },
+  "permissions": ["storage", "tabs", "<all_urls>", "http://127.0.0.1/*"],
+  "background": { "scripts": ["background.js"] },
+  "content_scripts": [
+    { "matches": ["<all_urls>"], "js": ["content.js"], "run_at": "document_idle" }
+  ],
+  "browser_action": {
+    "default_title": "Tracker episodi",
+    "default_popup": "popup.html",
+    "default_icon": "icona.svg"
+  }
+}

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<style>
+  body { width: 340px; margin: 0; padding: 12px; background: #12141a; color: #e7e9ef; font: 13px "Segoe UI", sans-serif; }
+  h1 { font-size: 15px; margin: 0 0 8px; }
+  .blocco { background: #1b1e27; border: 1px solid #2f3445; border-radius: 9px; padding: 9px; margin-bottom: 9px; }
+  .tenue { color: #9aa1b5; font-size: 12px; }
+  .ok { color: #3ecf8e; } .ko { color: #ff6b6b; } .warn { color: #f5b84d; }
+  button { background: #242836; border: 1px solid #2f3445; color: #e7e9ef; border-radius: 6px; padding: 5px 9px; cursor: pointer; font: inherit; }
+  button.p { background: #5b8cff; border-color: #5b8cff; color: #fff; }
+  input, select { background: #242836; border: 1px solid #2f3445; color: #e7e9ef; border-radius: 6px; padding: 4px 6px; font: inherit; }
+  .riga { display: flex; gap: 6px; align-items: center; margin: 5px 0; }
+  .sito { display: flex; gap: 6px; align-items: center; margin: 3px 0; }
+  .sito span { flex: 1; }
+</style>
+</head>
+<body>
+  <h1>📺 Tracker episodi</h1>
+  <div id="stato" class="tenue">Controllo il Gestore…</div>
+
+  <div class="blocco" id="pagina">
+    <div class="tenue">Questa pagina</div>
+    <div id="analisi">…</div>
+    <div class="riga"><button class="p" id="segna" disabled>Segna ora</button></div>
+  </div>
+
+  <div class="blocco">
+    <div class="tenue">Siti da seguire (una parola dell'indirizzo, es. il nome del sito)</div>
+    <div id="siti"></div>
+    <div class="riga">
+      <input id="parola" placeholder="nome del sito" style="flex:1">
+      <select id="categoria"><option value="serie">Serie TV</option><option value="anime">Anime</option></select>
+      <button id="aggiungi">+</button>
+    </div>
+    <div class="riga"><button id="questo">Aggiungi il sito di questa scheda</button></div>
+  </div>
+
+  <div class="blocco">
+    <div class="riga">Conta come visto dopo <input id="minuti" type="number" min="1" max="60" style="width:52px"> minuti</div>
+    <div class="riga">Modalità
+      <select id="modalita"><option value="auto">segna da solo</option><option value="conferma">chiedi conferma</option></select>
+    </div>
+    <div class="riga">Gestore <input id="gestore" style="flex:1"></div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

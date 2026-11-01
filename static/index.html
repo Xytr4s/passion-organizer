@@ -57,6 +57,16 @@ th{color:var(--tenue);font-weight:500;font-size:12px}
 .riga{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
 .ok{color:var(--ok)}.warn{color:var(--warn)}.ko{color:var(--ko)}
 .vuoto{padding:40px;text-align:center;color:var(--tenue)}
+.griglia.poster{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+.cop.poster{aspect-ratio:2/3}
+.cop.poster.mini{width:46px;flex:0 0 46px;font-size:12px}
+.chip{background:var(--pan2);border:1px solid var(--bordo);color:var(--tenue);border-radius:16px;padding:4px 11px;cursor:pointer;font:inherit;font-size:13px}
+.chip.on{color:var(--testo);border-color:var(--acc)}
+.card.st-in_corso{border:2px solid #3d7bff}.card.st-completata{border:2px solid var(--ok)}.card.st-droppata{border:2px solid var(--ko)}
+.card.st-in_pausa{border:2px solid var(--warn)}.card.st-da_vedere{border:2px solid var(--bordo)}
+.t.st-in_corso,.chip.st-in_corso{color:#7aa5ff}.t.st-completata,.chip.st-completata{color:var(--ok)}.t.st-droppata,.chip.st-droppata{color:var(--ko)}
+.t.st-in_pausa,.chip.st-in_pausa{color:var(--warn)}
+.risultato{cursor:pointer;padding:6px;border-radius:8px;align-items:flex-start}.risultato:hover{background:var(--pan2)}
 </style>
 </head>
 <body>
@@ -73,6 +83,7 @@ th{color:var(--tenue);font-weight:500;font-size:12px}
 <div id="toast"></div>
 
 <script src="/static/i18n.js"></script>
+<script src="/static/media.js"></script>
 <script>
 let D = {giochi:[], dischi:[], doppioni:[], cestini:[], fonti:[]};
 let PER_ID = {};
@@ -111,7 +122,7 @@ function toast(msg){const el=document.getElementById("toast");el.textContent=tS(
 function modale(html){document.getElementById("mbox").innerHTML=html;document.getElementById("modale").style.display="flex"}
 function chiudiModale(){document.getElementById("modale").style.display="none"}
 
-const VISTE = ["libreria","recenti","installer","doppioni","spazio","riordina","impostazioni"];
+const VISTE = ["libreria","recenti","installer","serie","anime","doppioni","spazio","riordina","impostazioni"];
 
 function disegnaNav(){
   document.getElementById("btnScan").textContent = t("aggiorna");
@@ -119,7 +130,8 @@ function disegnaNav(){
   document.documentElement.lang = LINGUA;
   document.getElementById("nav").innerHTML = VISTE.map(k => {
     let n = k==="libreria" ? D.giochi.filter(g=>!isInst(g)).length : k==="installer" ? D.giochi.filter(isInst).length
-          : k==="doppioni" ? D.doppioni.length : k==="recenti" ? D.giochi.filter(g=>g.recente).length : 0;
+          : k==="doppioni" ? D.doppioni.length : k==="recenti" ? D.giochi.filter(g=>g.recente).length
+          : (k==="serie"||k==="anime") ? M.titoli.filter(x=>x.categoria===k && x.stato==="in_corso").length : 0;
     return `<button class="${vista===k?"attivo":""}" onclick="vai('${k}')">${t("nav_"+k)}${n?`<span class="badge-n">${n}</span>`:""}</button>`;
   }).join("");
 }
@@ -140,7 +152,7 @@ async function carica(){
 function disegna(){
   disegnaNav();
   const m = document.getElementById("main");
-  m.innerHTML = {libreria:vLibreria, recenti:vRecenti, installer:vInstaller, doppioni:vDoppioni, spazio:vSpazio, riordina:vRiordina, impostazioni:vImpostazioni}[vista]();
+  m.innerHTML = {libreria:vLibreria, recenti:vRecenti, installer:vInstaller, serie:vSerie, anime:vAnime, doppioni:vDoppioni, spazio:vSpazio, riordina:vRiordina, impostazioni:vImpostazioni}[vista]();
   if (vista==="riordina") caricaRegistro();
 }
 
@@ -555,7 +567,8 @@ async function controllaStato(){
 }
 async function esci(){ if (confirm(t("esci_conferma"))) { await api("/api/esci",{}); document.body.innerHTML=`<div class="vuoto">${t("app_chiusa")}</div>`; } }
 
-carica().then(controllaStato);
+if (VISTE.includes(location.hash.slice(1))) vista = location.hash.slice(1);   // es. ...5577/#anime
+caricaMedia().catch(()=>{}).finally(() => carica().then(controllaStato));
 </script>
 </body>
 </html>
