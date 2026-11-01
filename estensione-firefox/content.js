@@ -1,6 +1,6 @@
 // Gira su ogni pagina ma si attiva solo sui siti scelti nelle impostazioni (parola chiave nell'indirizzo:
 // così continua a funzionare quando il sito cambia dominio). Dopo N minuti di visione con la scheda in primo
-// piano, manda titolo e indirizzo al Gestore, che riconosce serie, stagione ed episodio.
+// piano, manda titolo e indirizzo a PassionOrganizer, che riconosce serie, stagione ed episodio.
 
 (async () => {
   const imp = await browser.runtime.sendMessage({ tipo: "impostazioni" });
@@ -54,8 +54,8 @@
     const r = await browser.runtime.sendMessage({ tipo: "segna", pagina: pagina() });
     if (!r || r.errore) return avviso("📺 " + (r?.errore || "Errore"));
     const ep = sito.categoria === "film" ? "(film)" : `${r.stagione ? "S" + r.stagione + " " : ""}ep ${r.episodio}`;
-    if (r.esito === "aggiornato") avviso(`✔ Segnato nel Gestore: ${r.titolo} · ${ep}`);
-    else if (r.esito === "da_confermare") avviso(`📥 "${r.titolo}" ${ep} non è in lista: lo trovi da confermare nel Gestore.`);
+    if (r.esito === "aggiornato") avviso(`✔ Segnato in PassionOrganizer: ${r.titolo} · ${ep}`);
+    else if (r.esito === "da_confermare") avviso(`📥 "${r.titolo}" ${ep} non è in lista: lo trovi da confermare in PassionOrganizer.`);
   }
 
   async function quandoVisto() {
@@ -64,7 +64,7 @@
     if (!a || a.errore || a.episodio == null) return;          // non è la pagina di un episodio
     if (imp.modalita === "conferma") {
       const ep = sito.categoria === "film" ? "(film)" : `${a.stagione ? "S" + a.stagione + " " : ""}ep ${a.episodio}`;
-      avviso(`📺 Segnare "${a.in_lista || a.titolo}" ${ep} nel Gestore?`, [["Sì", segna], ["No", null]]);
+      avviso(`📺 Segnare "${a.in_lista || a.titolo}" ${ep} in PassionOrganizer?`, [["Sì", segna], ["No", null]]);
     } else {
       segna();
     }

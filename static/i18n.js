@@ -86,7 +86,7 @@ const TESTI = {
     prima_ancora: "Prima ancora: {lista}", nessuna_op: "Nessuna operazione eseguita finora.",
     annulla_conferma: "Rimettere le cartelle com'erano prima dell'ultima operazione?",
     // impostazioni
-    lingua: "Lingua", avvio_titolo: "Avvio", avvio_chk: "Apri il Gestore Giochi all'avvio di Windows",
+    lingua: "Lingua", avvio_titolo: "Avvio", avvio_chk: "Apri PassionOrganizer all'avvio di Windows",
     avvio_info: "All'avvio aggiorna anche la libreria in automatico (dopo circa 20 secondi).",
     avvio_on: "Si aprirà all'avvio di Windows", avvio_off: "Avvio automatico disattivato", errore: "Errore: {msg}",
     cartelle_titolo: "Cartelle dei giochi", cartelle_info: "Una per riga. Ogni sottocartella viene considerata un gioco. Le librerie Steam sono trovate in automatico.",
@@ -95,7 +95,7 @@ const TESTI = {
     info: "Info", ultimo_agg: "Ultimo aggiornamento: {quando}", in_corso_mai: "in corso / mai", salvato: "Salvato",
     // stato
     op_progresso: "Operazioni {a}/{b}", op_fallite: "Alcune operazioni non sono riuscite",
-    esci_conferma: "Chiudere il Gestore Giochi?", app_chiusa: "App chiusa. Puoi chiudere questa scheda.",
+    esci_conferma: "Chiudere PassionOrganizer?", app_chiusa: "App chiusa. Puoi chiudere questa scheda.",
   },
 
   en: {
@@ -169,7 +169,7 @@ const TESTI = {
     ultima_op: "Last operation: <b>{et}</b> ({n} folders, {quando})", annulla_ultima: "↶ Undo last operation",
     prima_ancora: "Before that: {lista}", nessuna_op: "No operations so far.",
     annulla_conferma: "Put the folders back as they were before the last operation?",
-    lingua: "Language", avvio_titolo: "Startup", avvio_chk: "Open Gestore Giochi when Windows starts",
+    lingua: "Language", avvio_titolo: "Startup", avvio_chk: "Open PassionOrganizer when Windows starts",
     avvio_info: "At startup it also refreshes the library automatically (after about 20 seconds).",
     avvio_on: "It will open when Windows starts", avvio_off: "Start with Windows disabled", errore: "Error: {msg}",
     cartelle_titolo: "Game folders", cartelle_info: "One per line. Each subfolder is treated as a game. Steam libraries are found automatically.",
@@ -177,7 +177,7 @@ const TESTI = {
     contenitori_info: "Container subfolders (like __ins or INS) and “recent” folders are set in <code>config.json</code>.",
     info: "Info", ultimo_agg: "Last refresh: {quando}", in_corso_mai: "in progress / never", salvato: "Saved",
     op_progresso: "Operations {a}/{b}", op_fallite: "Some operations failed",
-    esci_conferma: "Quit Gestore Giochi?", app_chiusa: "App closed. You can close this tab.",
+    esci_conferma: "Quit PassionOrganizer?", app_chiusa: "App closed. You can close this tab.",
   },
 };
 
@@ -318,9 +318,9 @@ Object.assign(TESTI.en, {
 // ---------------------------------------------------------------- impostazioni: telefono
 Object.assign(TESTI.it, {
   tel_titolo: "Telefono (serie, film e anime ovunque)",
-  tel_intro: "Collega un Foglio Google: avrai una pagina privata sul telefono con le tue serie, film e anime, e il Gestore si sincronizzerà da solo ogni 5 minuti e dopo ogni modifica. Gratis, una volta sola, circa 5 minuti.",
+  tel_intro: "Collega un Foglio Google: avrai una pagina privata sul telefono con le tue serie, film e anime, e PassionOrganizer si sincronizzerà da solo ogni 5 minuti e dopo ogni modifica. Gratis, una volta sola, circa 5 minuti.",
   tel_come: "Come si collega (5 minuti)", tel_riconfigura: "Rifai la configurazione",
-  tel_p1: "Crea un Foglio Google vuoto (chiamalo come vuoi, es. “Gestore – serie, film e anime”).",
+  tel_p1: "Crea un Foglio Google vuoto (chiamalo come vuoi, es. “PassionOrganizer”).",
   tel_apri_fogli: "Apri Fogli Google",
   tel_p2: "Nel foglio: menu <b>Estensioni → Apps Script</b>. Cancella il codice che c'è e incolla questo:",
   tel_copia_codice: "📋 Copia lo script",
@@ -337,9 +337,9 @@ Object.assign(TESTI.it, {
 });
 Object.assign(TESTI.en, {
   tel_titolo: "Phone (series, movies and anime anywhere)",
-  tel_intro: "Connect a Google Sheet: you'll get a private page on your phone with your series, movies and anime, and the Manager syncs by itself every 5 minutes and after every change. Free, one-time, about 5 minutes.",
+  tel_intro: "Connect a Google Sheet: you'll get a private page on your phone with your series, movies and anime, and PassionOrganizer syncs by itself every 5 minutes and after every change. Free, one-time, about 5 minutes.",
   tel_come: "How to connect (5 minutes)", tel_riconfigura: "Set it up again",
-  tel_p1: "Create an empty Google Sheet (any name, e.g. “Manager – series, movies, anime”).",
+  tel_p1: "Create an empty Google Sheet (any name, e.g. “PassionOrganizer”).",
   tel_apri_fogli: "Open Google Sheets",
   tel_p2: "In the sheet: menu <b>Extensions → Apps Script</b>. Delete the existing code and paste this:",
   tel_copia_codice: "📋 Copy the script",
@@ -404,7 +404,7 @@ Object.assign(TESTI.en, {
 // ---------------------------------------------------------------- archivio stagioni
 Object.assign(TESTI.it, {
   stg_archivio: "Archivio", stg_tutti_anni: "Tutti gli anni",
-  stg_archivio_progresso: "Scarico l'archivio da MyAnimeList: {n} stagioni su {tot} (prima dal 2020, poi a ritroso verso il passato, una ogni 15 secondi mentre il Gestore è aperto).",
+  stg_archivio_progresso: "Scarico l'archivio da MyAnimeList: {n} stagioni su {tot} (prima dal 2020, poi a ritroso verso il passato, una ogni 15 secondi mentre PassionOrganizer è aperto).",
 });
 Object.assign(TESTI.en, {
   stg_archivio: "Archive", stg_tutti_anni: "All years",
@@ -419,4 +419,46 @@ Object.assign(TESTI.it, {
 Object.assign(TESTI.en, {
   stg_non_pubblicata: "This season isn't on MyAnimeList yet: anime will appear as they are announced (checked daily).",
   stg_futura_info: "Upcoming season: no scores yet, sorted by popularity (how many MAL users are waiting for it). Use 📌 to plan.",
+});
+
+// ---------------------------------------------------------------- importazione liste anime
+Object.assign(TESTI.it, {
+  imp_pulsante: "Importa lista", imp_titolo: "Importa la tua lista anime", imp_vai: "Importa da {nome}",
+  imp_utente_mal: "nome utente MyAnimeList", imp_utente_anilist: "nome utente AniList",
+  imp_utente_au: "https://www.animeunity…/user/NOME/animelist",
+  imp_info_myanimelist: "Scrivi il tuo nome utente MyAnimeList: la lista deve essere pubblica (Impostazioni di MAL → Privacy).",
+  imp_info_anilist: "Scrivi il tuo nome utente AniList: il profilo deve essere pubblico (Impostazioni di AniList → Lista).",
+  imp_info_animeunity: "Incolla il link del tuo profilo pubblico AnimeUnity (pagina della lista).",
+  imp_regola: "Gli anime già presenti vengono riconosciuti (anche importati da un altro servizio): nessun doppione. Puoi rifarlo quando vuoi per aggiornare.",
+});
+Object.assign(TESTI.en, {
+  imp_pulsante: "Import list", imp_titolo: "Import your anime list", imp_vai: "Import from {nome}",
+  imp_utente_mal: "MyAnimeList username", imp_utente_anilist: "AniList username",
+  imp_utente_au: "https://www.animeunity…/user/NAME/animelist",
+  imp_info_myanimelist: "Enter your MyAnimeList username: the list must be public (MAL settings → Privacy).",
+  imp_info_anilist: "Enter your AniList username: the profile must be public (AniList settings → Lists).",
+  imp_info_animeunity: "Paste the link to your public AnimeUnity profile (list page).",
+  imp_regola: "Anime already in your list are recognized (even if imported from another service): no duplicates. Run it again anytime to update.",
+});
+
+// ---------------------------------------------------------------- benvenuto (primo avvio)
+Object.assign(TESTI.it, {
+  bv_titolo: "Benvenuto in PassionOrganizer", bv_cerco: "Cerco le cartelle dei giochi sui tuoi dischi…",
+  bv_intro: "I tuoi giochi, le serie TV, i film e gli anime in un unico posto. Due scelte e si parte.",
+  bv_cartelle: "Dove sono i tuoi giochi?", bv_cartelle_info: "Ogni sottocartella di queste cartelle sarà considerata un gioco. Puoi cambiarle quando vuoi nelle Impostazioni.",
+  bv_n_cartelle: "{n} cartelle", bv_nessuna: "Nessuna cartella di giochi trovata in automatico: aggiungine una qui sotto.",
+  bv_sfoglia: "Sfoglia…", bv_aggiungi: "Aggiungi",
+  bv_steam: "Librerie Steam trovate: {n} giochi verranno aggiunti in automatico.",
+  bv_media: "Serie TV, film e anime", bv_media_info: "Nelle sezioni a sinistra: cerca e aggiungi titoli, o importa la tua lista anime da MyAnimeList o AniList.",
+  bv_salta: "Non ho giochi, uso solo serie/film/anime", bv_inizia: "Inizia",
+});
+Object.assign(TESTI.en, {
+  bv_titolo: "Welcome to PassionOrganizer", bv_cerco: "Looking for game folders on your drives…",
+  bv_intro: "Your games, TV series, movies and anime in one place. Two choices and you're ready.",
+  bv_cartelle: "Where are your games?", bv_cartelle_info: "Every subfolder of these folders will be treated as a game. You can change them anytime in Settings.",
+  bv_n_cartelle: "{n} folders", bv_nessuna: "No game folders found automatically: add one below.",
+  bv_sfoglia: "Browse…", bv_aggiungi: "Add",
+  bv_steam: "Steam libraries found: {n} games will be added automatically.",
+  bv_media: "TV series, movies and anime", bv_media_info: "In the sections on the left: search and add titles, or import your anime list from MyAnimeList or AniList.",
+  bv_salta: "I don't have games, only series/movies/anime", bv_inizia: "Start",
 });

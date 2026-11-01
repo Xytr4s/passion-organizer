@@ -695,3 +695,161 @@ def archivio_per_interfaccia():
             voci.append(v)
     return {"voci": voci, "scaricate": scaricate, "totale": len(elenco_stagioni(PRIMO_ANNO_MAL, future=0)),
             "scaricamento": dict(ARCHIVIO)}
+
+
+# ================================================================ importazione da MyAnimeList e AniList (nome utente)
+
+UA_BROWSER = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:130.0) Gecko/20100101 Firefox/130.0"}
+STATI_MAL = {1: "in_corso", 2: "completata", 3: "in_pausa", 4: "droppata", 6: "da_vedere"}
+STATI_ANILIST = {"CURRENT": "in_corso", "REPEATING": "in_corso", "COMPLETED": "completata",
+                 "PAUSED": "in_pausa", "DROPPED": "droppata", "PLANNING": "da_vedere"}
+
+
+def _data_mal(s):
+    """'05-08-22' o '2022-08-05' -> '2022-08-05' (le liste MAL usano formati diversi)."""
+    if not s or s in ("-", "0000-00-00"):
+        return None
+    m = re.match(r"^(\d{4})-(\d{2})-(\d{2})$", s)
+    if m:
+        return s if m.group(2) != "00" else None
+    m = re.match(r"^(\d{2})-(\d{2})-(\d{2})$", s)   # mm-dd-yy
+    if m:
+        return f"20{m.group(3)}-{m.group(1)}-{m.group(2)}"
+    return None
+
+
+def leggi_lista_mal(utente):
+    """Lista anime pubblica di un utente MyAnimeList (tutti gli stati, 300 voci per richiesta)."""
+    utente = utente.strip().strip("/").split("/")[-1]
+    voci, offset = [], 0
+    while True:
+        r = requests.get(f"https://myanimelist.net/animelist/{requests.utils.quote(utente)}/load.json",
+                         params={"offset": offset, "status": 7}, headers=UA_BROWSER, timeout=60)
+        if r.status_code in (400, 403, 404):
+            raise ValueError("lista non trovata o privata: controlla il nome utente e che la lista sia pubblica")
+        r.raise_for_status()
+        pagina = r.json()
+        if not pagina:
+            break
+        for x in pagina:
+            img = x.get("anime_image_path") or ""
+            img = re.sub(r"/r/\d+x\d+", "", img).split("?")[0]   # immagine a grandezza piena
+            voci.append({
+                "chiave": f"mal:{x['anime_id']}", "mal_id": str(x["anime_id"]), "anilist_id": None,
+                "titolo": str(x.get("anime_title_eng") or x.get("anime_title") or "?"),
+                "alias": [str(t) for t in (x.get("anime_title"), x.get("anime_title_eng")) if t],
+                "tipo": "film" if x.get("anime_media_type_string") == "Movie" else "serie",
+                "totali": x.get("anime_num_episodes") or None, "visti": int(x.get("num_watched_episodes") or 0),
+                "stato": STATI_MAL.get(x.get("status"), "da_vedere"), "voto": x.get("score") or None,
+                "in_onda": x.get("anime_airing_status") == 1, "copertina": img or None, "trama": "",
+                "anno": (x.get("anime_start_date_string") or "")[-2:] and None,
+                "inizio": _data_mal(x.get("start_date_string")), "fine": _data_mal(x.get("finish_date_string")),
+                "aggiornato": None, "preferito": False,
+            })
+        if len(pagina) < 300:
+            break
+        offset += 300
+        time.sleep(1)
+    return voci
+
+
+ANILIST_LISTA = """query ($u: String) { MediaListCollection(userName: $u, type: ANIME) { lists { entries {
+  status progress score(format: POINT_10) updatedAt startedAt { year month day } completedAt { year month day }
+  media { id idMal episodes format status seasonYear isFavourite title { romaji english } synonyms
+          coverImage { large } description(asHtml: false) } } } } }"""
+
+
+def leggi_lista_anilist(utente):
+    utente = utente.strip().strip("/").split("/")[-1]
+    r = requests.post("https://graphql.anilist.co", json={"query": ANILIST_LISTA, "variables": {"u": utente}}, timeout=60)
+    d = r.json()
+    if d.get("errors"):
+        msg = d["errors"][0].get("message", "")
+        raise ValueError("profilo privato: rendilo pubblico nelle impostazioni di AniList" if "Private" in msg
+                         else "utente non trovato" if "Not Found" in msg else msg)
+    data = lambda x: f"{x['year']:04d}-{x['month'] or 1:02d}-{x['day'] or 1:02d}" if x and x.get("year") else None
+    voci = []
+    for lista in d["data"]["MediaListCollection"]["lists"]:
+        for e in lista["entries"]:
+            m = e["media"]
+            nomi = [n for n in (m["title"].get("english"), m["title"].get("romaji")) if n]
+            voci.append({
+                "chiave": f"al:{m['id']}", "mal_id": str(m["idMal"]) if m.get("idMal") else None, "anilist_id": str(m["id"]),
+                "titolo": nomi[0] if nomi else "?", "alias": nomi + (m.get("synonyms") or [])[:5],
+                "tipo": "film" if m.get("format") == "MOVIE" else "serie",
+                "totali": m.get("episodes"), "visti": int(e.get("progress") or 0),
+                "stato": STATI_ANILIST.get(e["status"], "da_vedere"), "voto": e.get("score") or None,
+                "in_onda": m.get("status") == "RELEASING", "copertina": (m.get("coverImage") or {}).get("large"),
+                "trama": re.sub(r"<[^>]+>", "", m.get("description") or "")[:600], "anno": m.get("seasonYear"),
+                "inizio": data(e.get("startedAt")), "fine": data(e.get("completedAt")),
+                "aggiornato": datetime.fromtimestamp(e["updatedAt"]).isoformat(timespec="seconds") if e.get("updatedAt") else None,
+                "preferito": bool(m.get("isFavourite")),
+            })
+    return voci
+
+
+def importa_lista(voci, origine):
+    """Importa voci normalizzate (da MAL o AniList). Gli anime già presenti si riconoscono dalla stessa
+    voce importata in precedenza, dal codice MyAnimeList o da quello AniList: niente doppioni tra servizi.
+    Per i titoli già presenti vince la modifica più recente."""
+    with _lock:
+        d = carica()
+        per_chiave = {k: t for t in d["titoli"] for k in t.get("chiavi_import", [])}
+        per_mal = {}
+        for t in d["titoli"]:
+            if t.get("mal_id") and t["categoria"] == "anime":
+                per_mal.setdefault(str(t["mal_id"]), t)
+        per_al = {str(t["fonte_id"]): t for t in d["titoli"] if t.get("fonte") == "anilist" and t.get("fonte_id")}
+        nuovi = aggiornati = invariati = 0
+        for v in voci:
+            t = per_chiave.get(v["chiave"]) or (per_mal.get(v["mal_id"]) if v["mal_id"] else None) \
+                or (per_al.get(v["anilist_id"]) if v["anilist_id"] else None)
+            totali = v["totali"] or None
+            if totali and v["visti"] > totali:
+                totali = v["visti"]
+            visti = (totali or v["visti"]) if v["stato"] == "completata" else 0 if v["stato"] == "da_vedere" else v["visti"]
+            aggiornato = v["aggiornato"] or v["fine"] and f"{v['fine']}T12:00:00" or v["inizio"] and f"{v['inizio']}T12:00:00" \
+                or "2000-01-01T00:00:00"
+            if t and (t.get("aggiornato") or "") >= aggiornato and v["aggiornato"]:
+                invariati += 1
+                t.setdefault("chiavi_import", [])
+                if v["chiave"] not in t["chiavi_import"]:
+                    t["chiavi_import"].append(v["chiave"])
+                continue
+            if t and not v["aggiornato"] and t.get("chiavi_import") and v["chiave"] in t["chiavi_import"] \
+                    and (stagione_attuale(t) or {}).get("visti") == visti and t["stato"] == stato_generale({"stagioni": [{"stato": v["stato"]}]}):
+                invariati += 1                       # nessuna data di modifica (MAL): invariato se stato ed episodi coincidono
+                continue
+            stagione = nuova_stagione(1, totali, v["stato"])
+            stagione.update(visti=visti, voto=v["voto"], inizio=v["inizio"],
+                            fine=v["fine"] if v["stato"] in ("completata", "droppata") else None, aggiornato=aggiornato)
+            if t:
+                t["stagioni"] = [stagione] if len(t["stagioni"]) <= 1 else t["stagioni"]
+                if len(t["stagioni"]) > 1:
+                    s = stagione_attuale(t)
+                    s.update(stato=v["stato"], visti=visti)
+                t.update(voto=v["voto"] or t.get("voto"), preferito=v["preferito"] or t.get("preferito", False))
+                for k, val in (("copertina", v["copertina"]), ("trama", v["trama"]), ("mal_id", v["mal_id"]), ("anno", v["anno"])):
+                    if val and not t.get(k):
+                        t[k] = val
+                aggiornati += 1
+            else:
+                t = {"id": uuid.uuid4().hex[:10], "categoria": "anime", "tipo": v["tipo"], "titolo": v["titolo"],
+                     "titolo_originale": "", "fonte": "anilist" if v["anilist_id"] else "mal",
+                     "fonte_id": v["anilist_id"] or v["mal_id"], "mal_id": v["mal_id"], "anno": v["anno"],
+                     "copertina": v["copertina"], "trama": v["trama"], "alias": list(dict.fromkeys(v["alias"])),
+                     "voto": v["voto"], "preferito": v["preferito"], "note": "", "stagioni": [stagione], "creato": adesso()}
+                d["titoli"].append(t)
+                nuovi += 1
+                if v["mal_id"]:
+                    per_mal[v["mal_id"]] = t
+            t["alias"] = list(dict.fromkeys(t.get("alias", []) + v["alias"]))
+            t.setdefault("chiavi_import", [])
+            if v["chiave"] not in t["chiavi_import"]:
+                t["chiavi_import"].append(v["chiave"])
+            per_chiave[v["chiave"]] = t
+            t["stato"] = stato_generale(t)
+            t["aggiornato"] = aggiornato
+        d.setdefault("profili_import", {})[origine["servizio"]] = origine["utente"]
+        salva(d)
+    return {"nuovi": nuovi, "aggiornati": aggiornati, "invariati": invariati, "totale": len(voci)}

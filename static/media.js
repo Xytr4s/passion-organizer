@@ -47,7 +47,7 @@ function disegnaMedia(categoria){
     <div class="filtri">
       <button class="b p" onclick="apriAggiungi('${categoria}')">${t_("m_aggiungi")}</button>
       ${categoria === "anime" ? `<button class="b" onclick="apriStagione()">📅 ${t_("stg_pulsante")}${stagioneNuova() ? ' <span class="badge-n">NEW</span>' : ""}</button>
-        <button class="b" onclick="importaAnimeunity()">⬇ ${t_("au_importa")}</button>` : ""}
+        <button class="b" onclick="importaLista()">⬇ ${t_("imp_pulsante")}</button>` : ""}
       <input placeholder="${t_("m_cerca_lista")}" value="${esc(FM.testo)}" oninput="FM.testo=this.value;disegnaMedia('${categoria}')" style="min-width:200px">
       <select onchange="FM.ord=this.value;disegnaMedia('${categoria}')">${[["aggiornato","m_o_agg"],["titolo","m_o_titolo"],["voto","m_o_voto"],["anno","m_o_anno"]]
         .map(([v,k])=>`<option value="${v}" ${FM.ord===v?"selected":""}>${t_(k)}</option>`).join("")}</select>
@@ -164,7 +164,40 @@ async function eliminaMedia(id){
   chiudiModale(); await caricaMedia(); disegnaMedia(sezione);
 }
 
-// ---------------------------------------------------------------- importazione da AnimeUnity
+// ---------------------------------------------------------------- importazione della lista anime (MAL / AniList / AnimeUnity)
+const SERVIZI_IMPORT = [
+  ["myanimelist", "MyAnimeList", "imp_utente_mal"],
+  ["anilist", "AniList", "imp_utente_anilist"],
+  ["animeunity", "AnimeUnity", "imp_utente_au"],
+];
+function importaLista(servizio){
+  servizio = servizio || "myanimelist";
+  const profili = M.profili_import || {};
+  const [, nome, segnaposto] = SERVIZI_IMPORT.find(x => x[0] === servizio);
+  modale(`<h2 style="margin-top:0">⬇ ${t_("imp_titolo")}</h2>
+    <div class="filtri">${SERVIZI_IMPORT.map(([k, n]) => `<button class="chip ${k === servizio ? "on" : ""}" onclick="importaLista('${k}')">${n}</button>`).join("")}</div>
+    <p class="tenue">${t_("imp_info_" + servizio)}</p>
+    <div class="riga"><input id="impUtente" value="${esc(profili[servizio] || (servizio === "animeunity" ? M.profilo_animeunity || "" : ""))}"
+        placeholder="${t_(segnaposto)}" style="flex:1" onkeydown="if(event.key==='Enter')eseguiImport('${servizio}')">
+      <button class="b p" id="impVai" onclick="eseguiImport('${servizio}')">${t_("imp_vai", {nome})}</button></div>
+    <div id="impEsito"></div>
+    <p class="tenue" style="font-size:12px">${t_("imp_regola")}</p>
+    <div class="riga" style="justify-content:flex-end"><button class="b" onclick="chiudiModale()">${t_("chiudi")}</button></div>`);
+  setTimeout(() => document.getElementById("impUtente")?.focus(), 50);
+}
+async function eseguiImport(servizio){
+  const utente = document.getElementById("impUtente").value.trim(); if (!utente) return;
+  document.getElementById("impVai").disabled = true;
+  document.getElementById("impEsito").innerHTML = `<p class="tenue">${t_("au_in_corso")}</p>`;
+  const r = await api("/api/media/importa", {servizio, utente});
+  document.getElementById("impVai").disabled = false;
+  document.getElementById("impEsito").innerHTML = r.ok
+    ? `<p class="ok">✔ ${t_("au_fatto", {tot: r.totale, nuovi: r.nuovi, agg: r.aggiornati, inv: r.invariati})}</p>`
+    : `<p class="ko">${esc(r.messaggio)}</p>`;
+  await caricaMedia(); disegnaMedia("anime");
+}
+
+// ---------------------------------------------------------------- importazione da AnimeUnity (vecchio pulsante, ora nella finestra unica)
 function importaAnimeunity(){
   modale(`<h2 style="margin-top:0">⬇ ${t_("au_importa")}</h2>
     <p class="tenue">${t_("au_info")}</p>

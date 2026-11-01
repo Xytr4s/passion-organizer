@@ -1,11 +1,11 @@
 /**
- * Gestore Giochi — sincronizzazione con il telefono (Google Apps Script, collegato a un Foglio Google).
+ * PassionOrganizer — sincronizzazione con il telefono (Google Apps Script, collegato a un Foglio Google).
  *
- * - Il Gestore sul PC invia la sua lista e riceve le modifiche fatte dal telefono (doPost, azione "sincronizza").
+ * - PassionOrganizer sul PC invia la sua lista e riceve le modifiche fatte dal telefono (doPost, azione "sincronizza").
  * - Il telefono apre la pagina privata (doGet) per vedere e aggiornare serie, film e anime.
  * - Ogni richiesta deve contenere il codice segreto TOKEN.
  *
- * Il Gestore inserisce da solo il codice qui sotto quando copi questo file dalle sue Impostazioni.
+ * PassionOrganizer inserisce da solo il codice qui sotto quando copi questo file dalle sue Impostazioni.
  */
 const TOKEN = "__TOKEN__";
 const FOGLIO = "Lista";
@@ -70,7 +70,7 @@ function doGet(e) {
   const t = HtmlService.createTemplateFromFile("Pagina");
   t.token = p.token;
   return t.evaluate()
-    .setTitle("Serie, film e anime")
+    .setTitle("PassionOrganizer")
     .addMetaTag("viewport", "width=device-width, initial-scale=1, maximum-scale=1");
 }
 

@@ -1,4 +1,4 @@
-// Fa da ponte tra le pagine e il Gestore Giochi (http://127.0.0.1:5577), che gira sul PC.
+// Fa da ponte tra le pagine e PassionOrganizer (http://127.0.0.1:5577), che gira sul PC.
 
 const PREDEFINITE = {
   gestore: "http://127.0.0.1:5577",
@@ -17,7 +17,7 @@ async function chiama(percorso, corpo) {
   const r = await fetch(gestore + percorso, corpo === undefined ? {} : {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corpo),
   });
-  if (!r.ok) throw new Error(`Gestore: ${r.status}`);
+  if (!r.ok) throw new Error(`PassionOrganizer: ${r.status}`);
   return r.json();
 }
 
@@ -32,7 +32,7 @@ browser.runtime.onMessage.addListener(async (msg) => {
       return r;
     }
   } catch (e) {
-    return { errore: "Gestore Giochi non raggiungibile: è aperto?" };
+    return { errore: "PassionOrganizer non raggiungibile: è aperto?" };
   }
 });
 

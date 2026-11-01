@@ -54,7 +54,7 @@ async function analizzaScheda() {
   $("segna").onclick = async () => {
     const r = await browser.runtime.sendMessage({ tipo: "segna", pagina });
     $("analisi").textContent = r.esito === "aggiornato" ? `✔ Segnato: ${r.titolo} · ${ep}`
-      : r.esito === "da_confermare" ? "📥 Messo da confermare nel Gestore" : (r.errore || "Non riconosciuto");
+      : r.esito === "da_confermare" ? "📥 Messo da confermare in PassionOrganizer" : (r.errore || "Non riconosciuto");
     $("segna").disabled = true;
   };
 }
@@ -76,7 +76,7 @@ async function analizzaScheda() {
     analizzaScheda();
   };
   const ping = await browser.runtime.sendMessage({ tipo: "ping" });
-  $("stato").innerHTML = ping && ping.ok ? '<span class="ok">● Gestore Giochi collegato</span>'
-    : '<span class="ko">● Gestore Giochi non raggiungibile: aprilo sul PC</span>';
+  $("stato").innerHTML = ping && ping.ok ? '<span class="ok">● PassionOrganizer collegato</span>'
+    : '<span class="ko">● PassionOrganizer non raggiungibile: aprilo sul PC</span>';
   if (ping && ping.ok && scheda?.url?.startsWith("http")) analizzaScheda();
 })();

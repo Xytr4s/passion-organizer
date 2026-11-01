@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gestore Giochi</title>
+<title>PassionOrganizer</title>
 <style>
 :root{--bg:#12141a;--pan:#1b1e27;--pan2:#242836;--bordo:#2f3445;--testo:#e7e9ef;--tenue:#9aa1b5;--acc:#5b8cff;--ok:#3ecf8e;--warn:#f5b84d;--ko:#ff6b6b}
 *{box-sizing:border-box}
@@ -85,7 +85,7 @@ th{color:var(--tenue);font-weight:500;font-size:12px}
 </head>
 <body>
 <header>
-  <h1>🎮 Gestore Giochi</h1>
+  <h1>✨ PassionOrganizer</h1>
   <div class="spazio"></div>
   <div id="progresso"></div>
   <button class="b" id="btnScan" onclick="scansiona(false)"></button>
@@ -104,6 +104,7 @@ th{color:var(--tenue);font-weight:500;font-size:12px}
 <script src="/static/i18n.js"></script>
 <script src="/static/media.js"></script>
 <script src="/static/telefono.js"></script>
+<script src="/static/benvenuto.js"></script>
 <script>
 let D = {giochi:[], dischi:[], doppioni:[], cestini:[], fonti:[]};
 let PER_ID = {};
@@ -180,6 +181,7 @@ async function carica(){
   D.giochi.filter(isInst).forEach(g => (INSTALLER[g.chiave] ||= []).push(g));
   _simili = {};
   disegna();
+  if (D.configurato === false && !document.getElementById("bvPercorso") && !SETUP.mostrato) { SETUP.mostrato = true; mostraBenvenuto(); }
 }
 
 function disegna(){

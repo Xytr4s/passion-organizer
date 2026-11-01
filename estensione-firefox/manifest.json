@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
-  "name": "Gestore Giochi – Tracker episodi",
-  "version": "1.1.0",
-  "description": "Segna nel Gestore Giochi gli episodi di serie TV, film e anime che guardi.",
+  "name": "PassionOrganizer – Tracker episodi",
+  "version": "1.2.0",
+  "description": "Segna in PassionOrganizer gli episodi di serie TV, film e anime che guardi.",
   "browser_specific_settings": {
     "gecko": { "id": "tracker-episodi@gestore-giochi.local", "strict_min_version": "109.0" }
   },

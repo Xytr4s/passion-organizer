@@ -74,7 +74,7 @@ const etStato = (x, s) => x.tipo === "film" && (s === "completata" || s === "dro
 function avviso(t) { const a = document.getElementById("avviso"); a.textContent = t; a.style.display = "block"; setTimeout(() => a.style.display = "none", 2000); }
 function chiudi() { document.getElementById("modale").style.display = "none"; }
 
-// stesse regole del Gestore sul PC
+// stesse regole di PassionOrganizer sul PC
 function coerenza(s) {
   s.visti = Math.max(0, parseInt(s.visti) || 0);
   if (s.episodi_totali) s.visti = Math.min(s.visti, s.episodi_totali);

@@ -1,4 +1,4 @@
-"""Gestore giochi: app locale nel browser (http://127.0.0.1:5577)."""
+"""PassionOrganizer: giochi, serie TV, film e anime in un'unica app locale (http://127.0.0.1:5577)."""
 
 import json
 import os
@@ -175,10 +175,11 @@ def api_libreria():
     operazioni.FONTI_PROTETTE = set(scanner.carica_config()["fonti"]) | set(scanner.carica_config()["contenitori"])
     cop = carica_copertine()
     voti = carica_voti()
+    cfg_voti = scanner.carica_config().get("voti_da_prefisso", False)
     for g in dati["giochi"]:
         g["copertina"] = g.get("steam_appid") or cop.get(g["chiave"])
         v = voti.get(g["chiave"])
-        g["voto"] = None if v == "nessuno" else v or g.get("voto_nome")
+        g["voto"] = None if v == "nessuno" else v or (g.get("voto_nome") if cfg_voti else None)
     dischi = {}
     for g in dati["giochi"]:
         d = dischi.setdefault(g["disco"], {"disco": g["disco"], "giochi": 0, "occupato": 0})
@@ -199,7 +200,58 @@ def api_libreria():
         "cestini": operazioni.contenuto_cestini(sorted(dischi)),
         "fonti": scanner.carica_config()["fonti"],
         "lingua": scanner.carica_config().get("lingua", "it"),
+        "configurato": scanner.carica_config().get("configurato", True),
     })
+
+
+NOMI_CARTELLE_GIOCHI = {"games", "giochi", "game", "jeux", "spiele", "juegos", "jogos", "my games", "gog games",
+                        "epic games", "riot games", "ubisoft", "ea games", "xboxgames", "battle.net"}
+
+
+@app.get("/api/setup/suggerimenti")
+def api_setup_suggerimenti():
+    """Configurazione guidata: cartelle che sembrano contenere giochi, su tutti i dischi."""
+    trovate = []
+    for lettera in "CDEFGHIJKLMNOPQRSTUVWXYZ":
+        radice = f"{lettera}:\\"
+        if not os.path.exists(radice):
+            continue
+        try:
+            voci = list(os.scandir(radice))
+        except OSError:
+            continue
+        for e in voci:
+            try:
+                if e.is_dir() and e.name.lower() in NOMI_CARTELLE_GIOCHI:
+                    n = sum(1 for x in os.scandir(e.path) if x.is_dir())
+                    if n:
+                        trovate.append({"percorso": e.path, "giochi": n})
+                    lib = os.path.join(e.path, "Library")           # es. "Amazon Games\Library"
+                    if os.path.isdir(lib):
+                        trovate.append({"percorso": lib, "giochi": sum(1 for x in os.scandir(lib) if x.is_dir())})
+            except OSError:
+                pass
+    return jsonify(cartelle=trovate, steam=len([1 for g in scanner.giochi_steam()]))
+
+
+@app.post("/api/setup")
+def api_setup():
+    j = request.json or {}
+    cfg = scanner.carica_config()
+    cfg["fonti"] = [f.strip() for f in j.get("fonti", []) if f.strip() and os.path.isdir(f.strip())]
+    cfg["lingua"] = j.get("lingua") if j.get("lingua") in ("it", "en") else cfg.get("lingua", "en")
+    cfg["configurato"] = True
+    scanner.salva_config(cfg)
+    scanner.avvia_scansione()
+    return jsonify(ok=True, fonti=cfg["fonti"])
+
+
+class ApiFinestra:
+    """Funzioni chiamabili dalla pagina quando gira nella finestra (pywebview): scelta di una cartella."""
+    def scegli_cartella(self):
+        import webview
+        r = webview.windows[0].create_file_dialog(webview.FOLDER_DIALOG)
+        return r[0] if r else ""
 
 
 @app.post("/api/lingua")
@@ -477,6 +529,31 @@ def api_stagione_mal_scelta():
     return jsonify(media.scelta_stagione(j["voce"], j["azione"]) or {"ok": False})
 
 
+@app.post("/api/media/importa")
+def api_media_importa():
+    """Importa la lista anime da un servizio: myanimelist / anilist (nome utente) o animeunity (indirizzo del profilo)."""
+    j = request.json or {}
+    servizio, utente = j.get("servizio"), (j.get("utente") or "").strip()
+    if not utente:
+        return jsonify(ok=False, messaggio="nome utente mancante"), 400
+    try:
+        if servizio == "myanimelist":
+            esito = media.importa_lista(media.leggi_lista_mal(utente), {"servizio": servizio, "utente": utente})
+        elif servizio == "anilist":
+            esito = media.importa_lista(media.leggi_lista_anilist(utente), {"servizio": servizio, "utente": utente})
+        elif servizio == "animeunity":
+            esito = media.importa_animeunity(media.leggi_profilo_animeunity(utente))
+            d = media.carica()
+            d["profilo_animeunity"] = utente
+            d.setdefault("profili_import", {})["animeunity"] = utente
+            media.salva(d)
+        else:
+            return jsonify(ok=False, messaggio="servizio sconosciuto"), 400
+    except Exception as e:
+        return jsonify(ok=False, messaggio=str(e)), 400
+    return jsonify(ok=True, **esito)
+
+
 @app.post("/api/media/importa_animeunity")
 def api_importa_animeunity():
     url = (request.json or {}).get("url", "").strip()
@@ -521,7 +598,21 @@ def api_estensione_analizza():
 # ---------------------------------------------------------------- avvio automatico con Windows
 
 def collegamento_avvio():
-    return Path(os.environ["APPDATA"]) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup" / "Gestore Giochi.lnk"
+    return CARTELLA_AVVIO / "PassionOrganizer.lnk"
+
+
+CARTELLA_AVVIO = Path(os.environ.get("APPDATA", ".")) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup"
+
+
+def migra_collegamento_avvio():
+    """Il vecchio collegamento 'Gestore Giochi.lnk' diventa 'PassionOrganizer.lnk' (stessa impostazione di prima)."""
+    vecchio = CARTELLA_AVVIO / "Gestore Giochi.lnk"
+    if vecchio.exists():
+        try:
+            imposta_avvio_automatico(True)
+            vecchio.unlink()
+        except Exception:
+            pass
 
 
 def imposta_avvio_automatico(attivo):
@@ -533,7 +624,7 @@ def imposta_avvio_automatico(attivo):
     ps = (
         "$s = (New-Object -ComObject WScript.Shell).CreateShortcut($env:LNK);"
         "$s.TargetPath = $env:PYW; $s.Arguments = '\"' + $env:APP + '\" --avvio';"
-        "$s.WorkingDirectory = $env:DIR; $s.Description = 'Gestore Giochi';"
+        "$s.WorkingDirectory = $env:DIR; $s.Description = 'PassionOrganizer';"
         "$s.IconLocation = \"$env:SystemRoot\\System32\\imageres.dll,186\"; $s.Save()"
     )
     env = dict(os.environ, LNK=str(lnk), PYW=str(pythonw), APP=str(BASE / "app.py"), DIR=str(BASE))
@@ -583,16 +674,17 @@ if __name__ == "__main__":
             webbrowser.open(url)
         else:
             import webview
-            webview.create_window("Gestore Giochi", url, width=1360, height=880, min_size=(800, 560))
+            webview.create_window("PassionOrganizer", url, width=1360, height=880, min_size=(800, 560))
             webview.start()
         sys.exit()
 
     threading.Thread(target=cerca_copertine, daemon=True).start()
     threading.Thread(target=_carica_velocita, daemon=True).start()
     sincronizza.avvia_in_background()                 # telefono: ogni 5 minuti e dopo ogni modifica
+    threading.Thread(target=migra_collegamento_avvio, daemon=True).start()
     threading.Timer(60, media.scarica_archivio).start()   # stagioni MAL dal 2020, una ogni 15 s, solo quelle mancanti
     sincronizza.richiedi()                            # e una volta all'avvio
-    if not scanner.DATI_FILE.exists() or "--avvio" in sys.argv:
+    if scanner.carica_config().get("configurato") and (not scanner.DATI_FILE.exists() or "--avvio" in sys.argv):
         # All'accensione del PC: aggiornamento veloce (ricalcola solo le cartelle cambiate)
         threading.Timer(20 if "--avvio" in sys.argv else 0, scanner.avvia_scansione).start()
 
@@ -605,7 +697,7 @@ if __name__ == "__main__":
         threading.Thread(target=avvia_server, daemon=True).start()
         while not porta_occupata():
             time.sleep(0.1)
-        webview.create_window("Gestore Giochi", url, width=1360, height=880, min_size=(800, 560),
-                              background_color="#12141A")
+        webview.create_window("PassionOrganizer", url, width=1360, height=880, min_size=(800, 560),
+                              background_color="#12141A", js_api=ApiFinestra())
         webview.start()
         os._exit(0)

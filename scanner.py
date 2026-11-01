@@ -14,21 +14,16 @@ CONFIG_FILE = BASE / "config.json"
 DATI_FILE = BASE / "dati.json"
 
 CONFIG_DEFAULT = {
-    # Cartelle che contengono giochi (ogni sottocartella = un gioco)
-    "fonti": [
-        r"H:\Games", r"C:\Games", r"E:\Games", r"F:\Games", r"K:\Games",
-        r"Y:\Games", r"Z:\Games", r"F:\Amazon Games\Library",
-        r"F:\Amazon Games\Library_1", r"K:\Riot Games",
-    ],
-    # Sottocartelle che non sono giochi ma contenitori di giochi
-    "contenitori": [
-        r"H:\Games\__ins", r"H:\Games\INS", r"H:\Games\__new",
-        r"H:\Games\Current Games", r"C:\Games\Riot Games", r"E:\Games\Epic Games",
-    ],
-    # Contenitori con i giochi più recenti (il numero 0001_ indica l'ordine)
-    "recenti": [r"H:\Games\__ins"],
+    # Cartelle che contengono giochi (ogni sottocartella = un gioco): scelte nella configurazione al primo avvio
+    "fonti": [],
+    # Sottocartelle che non sono giochi ma contenitori di giochi (es. una cartella "nuovi" dentro Games)
+    "contenitori": [],
+    # Contenitori con i giochi più recenti (il numero 0001_ nel nome indica l'ordine)
+    "recenti": [],
     "steam": True,
-    "exe_scelti": {},  # percorso gioco -> eseguibile scelto a mano
+    "exe_scelti": {},          # percorso gioco -> eseguibile scelto a mano
+    "configurato": False,      # False = mostra la configurazione guidata
+    "voti_da_prefisso": False, # True = cartelle "x0001 Nome" = bello, "L0001 Nome" = brutto
 }
 
 NOME_INSTALLER = "_Installer"  # sottocartella in cui l'app raggruppa installer e archivi
@@ -74,7 +69,12 @@ _lock = threading.Lock()
 def carica_config():
     cfg = dict(CONFIG_DEFAULT)
     if CONFIG_FILE.exists():
-        cfg.update(json.loads(CONFIG_FILE.read_text(encoding="utf-8")))
+        salvata = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+        if "configurato" not in salvata:
+            # installazione precedente alla configurazione guidata: è già configurata e usa i prefissi x/L
+            salvata.update(configurato=True, voti_da_prefisso=True)
+            CONFIG_FILE.write_text(json.dumps({**cfg, **salvata}, indent=2, ensure_ascii=False), encoding="utf-8")
+        cfg.update(salvata)
     else:
         salva_config(cfg)
     return cfg
