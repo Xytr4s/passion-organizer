@@ -304,9 +304,9 @@ def analizza_pagina(titolo_pagina, url="", nome_sito=""):
     """Dal titolo della scheda e dall'indirizzo ricava (titolo, stagione, episodio)."""
     testo = f"{titolo_pagina} {url.replace('-', ' ').replace('_', ' ').replace('/', ' ')}"
     stagione = episodio = None
-    # S2E4, S02 E04, S2:E4, S2.E4, S2-E4, S2 - E4
+    # S2E4, S02 E04, S2:E4, S2.E4, S2-E4, S2 - E4; "Season 4, Ep. 2", "Stagione 4 ep. 2", "St. 4 Ep. 2" (Prime Video)
     for pat in (r"\bS(\d{1,2})\s*[:.\-_]?\s*E(\d{1,4})\b", r"\b(\d{1,2})x(\d{1,4})\b",
-                r"stagione\s*(\d{1,2}).{0,20}?episodio\s*(\d{1,4})", r"season\s*(\d{1,2}).{0,20}?episode\s*(\d{1,4})"):
+                r"\b(?:stagione|season|st)\.?\s*(\d{1,2}).{0,20}?\b(?:episodio|episode|ep)\.?\s*(\d{1,4})\b"):
         m = re.search(pat, testo, re.I)
         if m:
             stagione, episodio = int(m.group(1)), int(m.group(2))
@@ -321,14 +321,14 @@ def analizza_pagina(titolo_pagina, url="", nome_sito=""):
             stagione = int(m.group(1))
     # nome della serie: parte del titolo prima dei riferimenti a episodio/stagione, senza il nome del sito
     t = titolo_pagina
-    if nome_sito:
-        t = re.sub(re.escape(nome_sito), " ", t, flags=re.I)
-    t = re.split(r"\bS\d{1,2}\s*[:.\-_]?\s*E\d|\b\d{1,2}x\d|\b(?:stagione|season|episodio|episode|ep)\b\.?\s*\d", t, flags=re.I)[0]
+    if nome_sito:   # anche con spazi in mezzo: "primevideo" toglie "Prime Video"
+        t = re.sub(r"\s*".join(map(re.escape, nome_sito)), " ", t, flags=re.I)
+    t = re.split(r"\bS\d{1,2}\s*[:.\-_]?\s*E\d|\b\d{1,2}x\d|\b(?:stagione|season|st|episodio|episode|ep)\b\.?\s*\d", t, flags=re.I)[0]
     pezzi = [p.strip() for p in re.split(r"\s[|–—-]\s|\s·\s", t) if p.strip()]
     t = max(pezzi, key=len) if pezzi else t
     t = RUMORE_TITOLO.sub(" ", t)
     t = re.sub(r"[\(\[].*?[\)\]]", " ", t)
-    t = re.sub(r"\s+", " ", t).strip(" -:|·")
+    t = re.sub(r"\s+", " ", t).strip(" -:|·,;")
     return t, stagione, episodio
 
 

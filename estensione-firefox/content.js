@@ -2,8 +2,22 @@
 // così continua a funzionare quando il sito cambia dominio). Dopo N minuti di visione con la scheda in primo
 // piano, manda titolo e indirizzo a PassionOrganizer, che riconosce serie, stagione ed episodio.
 
-const EPISODIO = /\bS\d{1,2}\s*E\d{1,4}\b|\b\d{1,2}x\d{1,4}\b|\b(episodio|episode|ep)\.?\s*\d{1,4}\b/i;
+const EPISODIO = /\bS\d{1,2}\s*[:.\-_]?\s*E\d{1,4}\b|\b\d{1,2}x\d{1,4}\b|\b(episodio|episode|ep)\.?\s*\d{1,4}\b/i;
 const NUMERO_EP = /^(?:ep(?:isodio|isode)?\.?\s*)?(\d{1,4})$/i;
+// scritte del player come "Season 4, Ep. 2 Titolo" o "Stagione 4, ep. 2" (es. Prime Video)
+const STAGIONE_EP = /\b(?:S\d{1,2}\s*[:.\-_]?\s*E\d{1,4}|(?:season|stagione|st)\.?\s*\d{1,2}.{0,20}?\b(?:episode|episodio|ep)\.?\s*\d{1,4})\b/i;
+
+// Siti come Prime Video lasciano nel titolo della scheda solo la serie: l'episodio è scritto nella barra
+// del player. Si cerca una scritta breve con stagione ed episodio e, accanto, il nome della serie.
+function scrittaPlayer() {
+  for (const el of document.querySelectorAll('[class*="title"],[class*="subtitle"],[class*="episode"],[class*="Title"]')) {
+    const testo = (el.innerText || "").trim();
+    if (!testo || testo.length > 150 || !STAGIONE_EP.test(testo)) continue;
+    const insieme = (el.parentElement?.innerText || "").trim().replace(/\s*\n+\s*/g, " ");
+    return insieme.length <= 200 && insieme.length > testo.length ? insieme : testo;
+  }
+  return null;
+}
 
 // Molti siti non scrivono l'episodio nel titolo della scheda: lo si trova nel pulsante dell'episodio
 // evidenziato (classe "active", "current", "selected"…) dentro l'elenco degli episodi.
@@ -29,8 +43,13 @@ function titoloPagina() {
   const candidati = [document.title, og, `${h1} ${h2}`.trim()].filter(Boolean);
   const conEpisodio = candidati.find(c => EPISODIO.test(c));
   if (conEpisodio) return conEpisodio;
-  const n = episodioEvidenziato();
   const nome = (h1 || og || document.title).trim();
+  const player = scrittaPlayer();
+  if (player) {
+    // se accanto alla scritta non c'è il nome della serie, lo si prende dal titolo della pagina
+    return /^\W*(?:S\d|season|stagione|st\b)/i.test(player) ? `${nome} ${player}` : player;
+  }
+  const n = episodioEvidenziato();
   return n != null ? `${nome} Episodio ${n}` : document.title;
 }
 
@@ -41,7 +60,7 @@ function diagnostica() {
     .filter(t => !t.endsWith(": ")).slice(0, 15);
   return { titolo_scheda: document.title, og: document.querySelector('meta[property="og:title"]')?.content || "",
            h1: document.querySelector("h1")?.innerText?.slice(0, 120) || "", h2: document.querySelector("h2")?.innerText?.slice(0, 120) || "",
-           evidenziati: testi };
+           evidenziati: testi, player: scrittaPlayer() || "" };
 }
 
 // il riquadro dell'estensione chiede cosa c'è in questa pagina (funziona anche su un sito appena aggiunto)
