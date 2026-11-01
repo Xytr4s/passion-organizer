@@ -53,7 +53,8 @@ dai prefissi delle cartelle in `__ins` (`x0235 …` = bello, `L0236 …` = brutt
 - **+ Aggiungi** cerca su TVmaze (serie), AniList (anime) o nei suggerimenti di IMDb (film) — senza chiavi — oppure a mano.
 - **Estensione per Firefox** (`estensione-firefox/`): sui siti che scegli (riconosciuti da una parola dell'indirizzo, così funziona
   anche quando cambiano dominio) segna l'episodio o il film guardato dopo N minuti, o chiede prima. I titoli sconosciuti finiscono
-  in **Da confermare**.
+  in **Da confermare**. L'episodio viene letto dal titolo della scheda (`S2E4`, `S2:E4`, `3x07`, `Stagione 4, ep. 2`…),
+  dalla barra del player (es. Prime Video) o dall'indirizzo (`?season=1&episode=3`).
 - **Telefono**: pagina privata collegata a un tuo Foglio Google (Apps Script, gratis). Il Gestore si sincronizza ogni 5 minuti e dopo ogni modifica.
 - **Stagioni anime**: 📅 **Stagione** mostra una stagione di MyAnimeList ordinata per voto MAL (con le piattaforme legali) e permette
   ▶ Guardo / 📌 Pianifico / ✕ Non mi interessa; 🏆 **Archivio** raccoglie tutte le stagioni scaricate in background (dal 2020, poi a ritroso
