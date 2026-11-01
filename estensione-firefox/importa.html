@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Importa siti – Tracker episodi</title>
+<style>
+  body { max-width: 560px; margin: 40px auto; padding: 0 16px; background: #12141a; color: #e7e9ef; font: 15px "Segoe UI", sans-serif; }
+  h1 { font-size: 20px; }
+  .blocco { background: #1b1e27; border: 1px solid #2f3445; border-radius: 9px; padding: 14px; margin: 14px 0; }
+  .tenue { color: #9aa1b5; font-size: 13px; }
+  .ok { color: #3ecf8e; } .ko { color: #ff6b6b; }
+  label { display: block; margin: 8px 0; }
+  ul { margin: 6px 0; padding-left: 20px; }
+</style>
+</head>
+<body>
+  <h1>📺 Importa siti e impostazioni</h1>
+  <div class="blocco">
+    <p>Scegli il file <b>.json</b> creato con <b>💾 Esporta su file</b>.</p>
+    <input type="file" id="file" accept=".json,application/json">
+    <label><input type="checkbox" id="sostituisci"> Sostituisci i siti attuali (altrimenti si aggiungono a quelli che ci sono)</label>
+  </div>
+  <div class="blocco" id="esito"><span class="tenue">Nessun file scelto.</span></div>
+  <script src="importa.js"></script>
+</body>
+</html>

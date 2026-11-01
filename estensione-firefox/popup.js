@@ -79,6 +79,17 @@ async function analizzaScheda() {
   $("minuti").onchange = () => { imp.minuti = Math.max(1, +$("minuti").value || 5); salva(); };
   $("modalita").onchange = () => { imp.modalita = $("modalita").value; salva(); };
   $("gestore").onchange = () => { imp.gestore = $("gestore").value.trim().replace(/\/$/, ""); salva(); };
+  $("esporta").onclick = () => {
+    const dati = { tipo: "passionorganizer-estensione", versione: 1, siti: imp.siti, minuti: imp.minuti, modalita: imp.modalita };
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(dati, null, 2)], { type: "application/json" }));
+    a.download = `passionorganizer-siti-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+  // la finestra di scelta del file chiuderebbe questo riquadro: l'importazione si fa in una scheda a parte
+  $("importa").onclick = () => { browser.tabs.create({ url: browser.runtime.getURL("importa.html") }); window.close(); };
   $("aggiungi").onclick = () => { aggiungiSito($("parola").value, $("categoria").value); $("parola").value = ""; };
   $("questo").onclick = () => {
     if (!scheda?.url?.startsWith("http")) return;

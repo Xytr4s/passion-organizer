@@ -18,3 +18,4 @@ dist/
 build/
 *.spec
 estensione_ultima.json
+estensione_impostazioni.json

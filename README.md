@@ -54,7 +54,8 @@ prefixes in `__ins` (`x0235 …` = good, `L0236 …` = bad); **⭐ Rate unrated 
 - **Firefox extension** (`estensione-firefox/`): on the sites you choose (recognized by a keyword in the address, so it keeps
   working when a site changes domain) it marks the episode or movie you watched after N minutes, or asks first.
   Unknown titles land in **To confirm**. The episode is read from the tab title (`S2E4`, `S2:E4`, `3x07`, `Season 4, Ep. 2`…),
-  from the player bar (e.g. Prime Video) or from the address (`?season=1&episode=3`).
+  from the player bar (e.g. Prime Video) or from the address (`?season=1&episode=3`). Sites and settings are copied into the app
+  automatically (restored on a fresh install) and can be exported / imported as a file from the popup.
 - **Phone**: a private page backed by your own Google Sheet (Apps Script, free). The app syncs every 5 minutes and after every change.
 - **Anime seasons**: 📅 **Season** shows a MyAnimeList season sorted by MAL score (with legal streaming platforms) and lets you pick
   ▶ Watch / 📌 Plan / ✕ Not interested; 🏆 **Archive** browses every season downloaded in the background (from 2020, then back to 1917),

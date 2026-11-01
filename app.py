@@ -584,6 +584,28 @@ def api_estensione_ping():
     return jsonify(ok=True, app="gestore-giochi")
 
 
+IMPOSTAZIONI_ESTENSIONE = BASE / "estensione_impostazioni.json"
+
+
+@app.route("/api/estensione/impostazioni", methods=["GET", "POST"])
+def api_estensione_impostazioni():
+    """Copia di sicurezza dei siti e delle impostazioni dell'estensione: se Firefox la reinstalla
+    (o la versione firmata parte vuota), l'estensione li riprende da qui."""
+    if request.method == "GET":
+        try:
+            return jsonify(json.loads(IMPOSTAZIONI_ESTENSIONE.read_text(encoding="utf-8")))
+        except (OSError, ValueError):
+            return jsonify({})
+    j = request.get_json(force=True, silent=True) or {}
+    siti = [{"parola": str(s.get("parola", "")).strip().lower()[:60], "categoria": s.get("categoria") if s.get("categoria") in ("serie", "anime", "film") else "serie"}
+            for s in j.get("siti", []) if isinstance(s, dict) and str(s.get("parola", "")).strip()]
+    dati = {"siti": siti, "minuti": max(1, min(60, int(j.get("minuti") or 5))),
+            "modalita": "conferma" if j.get("modalita") == "conferma" else "auto",
+            "salvato": time.strftime("%Y-%m-%d %H:%M")}
+    IMPOSTAZIONI_ESTENSIONE.write_text(json.dumps(dati, indent=2, ensure_ascii=False), encoding="utf-8")
+    return jsonify(ok=True)
+
+
 @app.post("/api/estensione/analizza")
 def api_estensione_analizza():
     """Cosa riconosce l'estensione in una pagina, senza salvare nulla."""
