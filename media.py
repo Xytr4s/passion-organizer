@@ -316,13 +316,15 @@ def analizza_pagina(titolo_pagina, url="", nome_sito=""):
         if m:
             episodio = int(m.group(1))
     if stagione is None:
-        m = re.search(r"\b(?:stagione|season)\s*(\d{1,2})\b", testo, re.I)
+        m = re.search(r"\b(?:stagione|season)\s*(\d{1,2})\b", testo, re.I) \
+            or re.search(r"\s[-–|:]\s*S(\d{1,2})\s*$", titolo_pagina)       # "The Terminal List - S2" (Prime Video)
         if m:
             stagione = int(m.group(1))
     # nome della serie: parte del titolo prima dei riferimenti a episodio/stagione, senza il nome del sito
     t = titolo_pagina
     if nome_sito:   # anche con spazi in mezzo: "primevideo" toglie "Prime Video"
         t = re.sub(r"\s*".join(map(re.escape, nome_sito)), " ", t, flags=re.I)
+    t = re.sub(r"\s[-–|:]\s*S\d{1,2}\s*$", "", t)
     t = re.split(r"\bS\d{1,2}\s*[:.\-_]?\s*E\d|\b\d{1,2}x\d|\b(?:stagione|season|st|episodio|episode|ep)\b\.?\s*\d", t, flags=re.I)[0]
     pezzi = [p.strip() for p in re.split(r"\s[|–—-]\s|\s·\s", t) if p.strip()]
     t = max(pezzi, key=len) if pezzi else t
