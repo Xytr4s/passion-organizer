@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<style>
+  :root { --bg:#12141a; --pan:#1b1e27; --pan2:#242836; --bordo:#2f3445; --testo:#e7e9ef; --tenue:#9aa1b5; --acc:#5b8cff; --ok:#3ecf8e; --warn:#f5b84d; --ko:#ff6b6b; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--testo); font: 15px/1.4 -apple-system, "Segoe UI", Roboto, sans-serif; padding-bottom: 70px; }
+  header { position: sticky; top: 0; background: var(--pan); border-bottom: 1px solid var(--bordo); padding: 10px 12px; z-index: 5; }
+  .sezioni { display: flex; gap: 6px; }
+  .sezioni button { flex: 1; background: none; border: 0; color: var(--tenue); padding: 8px 4px; border-radius: 9px; font: inherit; font-size: 13px; }
+  .sezioni button.on { background: var(--pan2); color: var(--testo); }
+  .sezioni .ic { display: block; font-size: 22px; }
+  .chips { display: flex; gap: 6px; overflow-x: auto; padding: 10px 12px 4px; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip { flex: 0 0 auto; background: var(--pan2); border: 1px solid var(--bordo); color: var(--tenue); border-radius: 16px; padding: 4px 11px; font: inherit; font-size: 13px; }
+  .chip.on { color: var(--testo); border-color: var(--acc); }
+  input, select { background: var(--pan2); border: 1px solid var(--bordo); color: var(--testo); border-radius: 8px; padding: 8px 10px; font: inherit; }
+  .cerca { margin: 6px 12px; width: calc(100% - 24px); }
+  .lista { padding: 4px 12px; display: flex; flex-direction: column; gap: 8px; }
+  .riga { display: flex; gap: 10px; align-items: center; background: var(--pan); border: 1px solid var(--bordo); border-left: 4px solid var(--bordo); border-radius: 10px; padding: 8px; }
+  .riga.in_corso { border-left-color: #3d7bff; } .riga.completata { border-left-color: var(--ok); }
+  .riga.droppata { border-left-color: var(--ko); } .riga.in_pausa { border-left-color: var(--warn); }
+  .riga img, .vuota { width: 46px; height: 68px; object-fit: cover; border-radius: 6px; background: var(--pan2); flex: 0 0 46px; }
+  .info { flex: 1; min-width: 0; }
+  .nome { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tenue { color: var(--tenue); font-size: 13px; }
+  .barra { height: 4px; background: var(--pan2); border-radius: 3px; overflow: hidden; margin-top: 4px; }
+  .barra div { height: 100%; background: var(--ok); }
+  button.b { background: var(--pan2); border: 1px solid var(--bordo); color: var(--testo); border-radius: 8px; padding: 8px 12px; font: inherit; }
+  button.p { background: var(--acc); border-color: var(--acc); color: #fff; }
+  button.k { border-color: var(--ko); color: var(--ko); }
+  button.piu { position: fixed; right: 16px; bottom: 16px; width: 56px; height: 56px; border-radius: 50%; font-size: 28px; box-shadow: 0 4px 14px #0008; }
+  #modale { position: fixed; inset: 0; background: #000b; display: none; align-items: flex-end; z-index: 10; }
+  #modale .box { background: var(--pan); width: 100%; max-height: 88vh; overflow: auto; border-radius: 16px 16px 0 0; padding: 16px; }
+  table { width: 100%; border-collapse: collapse; } td { padding: 6px 4px; border-bottom: 1px solid var(--bordo); }
+  .vuoto { text-align: center; color: var(--tenue); padding: 40px 10px; }
+  #avviso { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); background: var(--pan2); border: 1px solid var(--bordo); padding: 8px 14px; border-radius: 9px; display: none; }
+</style>
+</head>
+<body>
+<header><div class="sezioni" id="sezioni"></div></header>
+<div class="chips" id="chips"></div>
+<input class="cerca" id="cerca" oninput="disegna()">
+<div class="lista" id="lista"><div class="vuoto">…</div></div>
+<button class="b p piu" onclick="aggiungi()">+</button>
+<div id="modale" onclick="if(event.target===this)chiudi()"><div class="box" id="box"></div></div>
+<div id="avviso"></div>
+
+<script>
+const TOKEN = <?!= JSON.stringify(token) ?>;
+const IT = (navigator.language || "it").toLowerCase().startsWith("it");
+const T = IT ? {
+  serie: "Serie TV", film: "Film", anime: "Anime", tutti: "Tutti", cerca: "🔍 Cerca…", ep: "ep", stagione: "Stagione",
+  in_corso: "In corso", da_vedere: "Da vedere", in_pausa: "In pausa", completata: "Completata", droppata: "Droppata",
+  f_completata: "Visto", f_droppata: "Droppato", visto: "✔ Visto", vuoto: "Niente qui. Aggiungi con +", salvato: "Salvato",
+  chiudi: "Chiudi", stato: "Stato", drop_chiedi: "A quale episodio l'hai droppata?", aggiungi: "Aggiungi", titolo: "Titolo",
+  stagioni: "Stagioni", episodi: "Episodi per stagione (vuoto se non lo sai)", note: "Note", errore: "Errore: ", voto: "Voto",
+} : {
+  serie: "TV Series", film: "Movies", anime: "Anime", tutti: "All", cerca: "🔍 Search…", ep: "ep", stagione: "Season",
+  in_corso: "Watching", da_vedere: "Plan to watch", in_pausa: "On hold", completata: "Completed", droppata: "Dropped",
+  f_completata: "Watched", f_droppata: "Dropped", visto: "✔ Watched", vuoto: "Nothing here. Add with +", salvato: "Saved",
+  chiudi: "Close", stato: "Status", drop_chiedi: "At which episode did you drop it?", aggiungi: "Add", titolo: "Title",
+  stagioni: "Seasons", episodi: "Episodes per season (empty if unknown)", note: "Notes", errore: "Error: ", voto: "Rating",
+};
+const STATI = ["in_corso", "da_vedere", "in_pausa", "completata", "droppata"];
+const SEZ = [["serie", "📺"], ["film", "🎬"], ["anime", "⛩️"]];
+let L = [], sez = localStorage.getItem("sez") || "serie", filtro = "";
+
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const oggi = () => new Date().toISOString().slice(0, 10);
+const etStato = (x, s) => x.tipo === "film" && (s === "completata" || s === "droppata") ? T["f_" + s] : T[s];
+function avviso(t) { const a = document.getElementById("avviso"); a.textContent = t; a.style.display = "block"; setTimeout(() => a.style.display = "none", 2000); }
+function chiudi() { document.getElementById("modale").style.display = "none"; }
+
+// stesse regole del Gestore sul PC
+function coerenza(s) {
+  s.visti = Math.max(0, parseInt(s.visti) || 0);
+  if (s.episodi_totali) s.visti = Math.min(s.visti, s.episodi_totali);
+  if (s.visti > 0 && !s.inizio) s.inizio = oggi();
+  if (s.visti > 0 && s.stato === "da_vedere") s.stato = "in_corso";
+  if (s.episodi_totali && s.visti >= s.episodi_totali && ["in_corso", "da_vedere", "in_pausa"].includes(s.stato)) s.stato = "completata";
+  if (["completata", "droppata"].includes(s.stato) && !s.fine) s.fine = oggi();
+}
+function statoGenerale(x) {
+  const st = (x.stagioni || []).map(s => s.stato);
+  if (!st.length) return "da_vedere";
+  for (const k of ["in_corso", "in_pausa"]) if (st.includes(k)) return k;
+  if (st.includes("droppata")) return "droppata";
+  if (st.every(s => s === "completata")) return "completata";
+  if (st.includes("completata")) return "in_corso";
+  return "da_vedere";
+}
+const attuale = x => x.stagioni.find(s => s.stato !== "completata" && s.stato !== "droppata") || x.stagioni[x.stagioni.length - 1];
+
+function carica() {
+  google.script.run.withSuccessHandler(r => { L = r; disegna(); })
+    .withFailureHandler(e => document.getElementById("lista").innerHTML = `<div class="vuoto">${T.errore}${esc(e.message)}</div>`).lista(TOKEN);
+}
+function salva(x) {
+  x.stato = statoGenerale(x);
+  disegna();
+  google.script.run.withSuccessHandler(() => avviso(T.salvato)).withFailureHandler(e => avviso(T.errore + e.message)).salvaTitolo(TOKEN, x);
+}
+
+function disegna() {
+  document.getElementById("sezioni").innerHTML = SEZ.map(([k, ic]) => {
+    const n = L.filter(x => x.categoria === k && x.stato === "in_corso").length;
+    return `<button class="${sez === k ? "on" : ""}" onclick="sez='${k}';filtro='';localStorage.setItem('sez',sez);disegna()"><span class="ic">${ic}</span>${T[k]}${n ? ` (${n})` : ""}</button>`;
+  }).join("");
+  const tutti = L.filter(x => x.categoria === sez);
+  const stati = sez === "film" ? ["da_vedere", "completata", "droppata"] : STATI;
+  document.getElementById("chips").innerHTML = `<button class="chip ${filtro === "" ? "on" : ""}" onclick="filtro='';disegna()">${T.tutti} ${tutti.length}</button>` +
+    stati.map(s => `<button class="chip ${filtro === s ? "on" : ""}" onclick="filtro='${s}';disegna()">${sez === "film" ? etStato({ tipo: "film" }, s) : T[s]} ${tutti.filter(x => x.stato === s).length}</button>`).join("");
+  const c = document.getElementById("cerca"); c.placeholder = T.cerca;
+  const q = c.value.toLowerCase();
+  const lista = tutti.filter(x => (!filtro || x.stato === filtro) && (!q || x.titolo.toLowerCase().includes(q)))
+    .sort((a, b) => String(b.aggiornato).localeCompare(String(a.aggiornato)));
+  document.getElementById("lista").innerHTML = lista.length ? lista.map(x => {
+    const s = attuale(x);
+    const perc = s && s.episodi_totali ? Math.min(100, s.visti / s.episodi_totali * 100) : (x.stato === "completata" ? 100 : 0);
+    const prog = x.tipo === "film" ? "" : `${x.categoria === "serie" || x.stagioni.length > 1 ? "S" + s.numero + " · " : ""}${T.ep} ${s.visti}${s.episodi_totali ? "/" + s.episodi_totali : ""}`;
+    const puo1 = x.tipo !== "film" && !(s.episodi_totali && s.visti >= s.episodi_totali);
+    return `<div class="riga ${x.stato}" onclick="dettaglio('${x.id}')">
+      ${x.copertina ? `<img src="${esc(x.copertina)}" loading="lazy">` : `<div class="vuota"></div>`}
+      <div class="info"><div class="nome">${esc(x.titolo)}</div>
+        <div class="tenue">${etStato(x, x.stato)}${x.anno ? " · " + esc(x.anno) : ""}${prog ? " · " + prog : ""}</div>
+        ${x.tipo !== "film" ? `<div class="barra"><div style="width:${perc}%"></div></div>` : ""}</div>
+      ${puo1 ? `<button class="b p" onclick="event.stopPropagation();piuUno('${x.id}',1)">+1</button>` : ""}
+      ${x.tipo === "film" && x.stato !== "completata" ? `<button class="b p" onclick="event.stopPropagation();filmVisto('${x.id}')">${T.visto}</button>` : ""}
+    </div>`;
+  }).join("") : `<div class="vuoto">${T.vuoto}</div>`;
+}
+
+function trova(id) { return L.find(x => x.id === id); }
+function piuUno(id, delta, numero) {
+  const x = trova(id); const s = numero ? x.stagioni.find(z => z.numero === numero) : attuale(x);
+  s.visti = (parseInt(s.visti) || 0) + delta;
+  if (delta < 0 && s.stato === "completata") { s.stato = "in_corso"; s.fine = null; }
+  coerenza(s); salva(x);
+  if (numero) dettaglio(id);
+}
+function filmVisto(id) { const x = trova(id); const s = x.stagioni[0]; s.visti = 1; s.stato = "completata"; coerenza(s); salva(x); }
+function cambiaStato(id, numero, stato) {
+  const x = trova(id); const s = x.stagioni.find(z => z.numero === numero);
+  if (stato === "droppata" && x.tipo !== "film") {
+    const ep = prompt(T.drop_chiedi, s.visti); if (ep === null) return dettaglio(id);
+    s.visti = Math.max(0, parseInt(ep) || 0);
+  }
+  if (x.tipo === "film") s.visti = stato === "completata" ? 1 : 0;
+  s.stato = stato; s.fine = null; coerenza(s); salva(x); dettaglio(id);
+}
+
+function dettaglio(id) {
+  const x = trova(id);
+  const opz = sel => (x.tipo === "film" ? ["da_vedere", "completata", "droppata"] : STATI).map(s => `<option value="${s}" ${sel === s ? "selected" : ""}>${etStato(x, s)}</option>`).join("");
+  document.getElementById("box").innerHTML = `
+    <div style="display:flex;gap:12px">${x.copertina ? `<img src="${esc(x.copertina)}" style="width:80px;border-radius:8px">` : ""}
+      <div><h3 style="margin:0">${esc(x.titolo)}</h3><div class="tenue">${esc(x.anno || "")}</div></div></div>
+    <table>${x.stagioni.map(s => `<tr>
+      ${x.tipo === "film" ? "" : `<td><b>${T.stagione} ${s.numero}</b><div class="tenue">${T.ep} ${s.visti}${s.episodi_totali ? "/" + s.episodi_totali : ""}</div></td>
+      <td style="white-space:nowrap"><button class="b" onclick="piuUno('${x.id}',-1,${s.numero})">−1</button> <button class="b p" onclick="piuUno('${x.id}',1,${s.numero})">+1</button></td>`}
+      <td><select onchange="cambiaStato('${x.id}',${s.numero},this.value)">${opz(s.stato)}</select></td></tr>`).join("")}</table>
+    <p class="tenue">${T.note}</p>
+    <input style="width:100%" value="${esc(x.note || "")}" onchange="trova('${x.id}').note=this.value;salva(trova('${x.id}'))">
+    <p style="text-align:right"><button class="b" onclick="chiudi()">${T.chiudi}</button></p>`;
+  document.getElementById("modale").style.display = "flex";
+}
+
+function aggiungi() {
+  document.getElementById("box").innerHTML = `<h3 style="margin-top:0">${T.aggiungi}: ${T[sez]}</h3>
+    <p><input id="nTitolo" placeholder="${T.titolo}" style="width:100%"></p>
+    ${sez === "film" ? "" : `<p>${T.stagioni} <input id="nStagioni" type="number" value="1" min="1" style="width:70px"></p>
+    <p><input id="nEpisodi" type="number" min="0" placeholder="${T.episodi}" style="width:100%"></p>`}
+    <p style="text-align:right"><button class="b" onclick="chiudi()">${T.chiudi}</button> <button class="b p" onclick="creaTitolo()">${T.aggiungi}</button></p>`;
+  document.getElementById("modale").style.display = "flex";
+}
+function creaTitolo() {
+  const titolo = document.getElementById("nTitolo").value.trim(); if (!titolo) return;
+  const film = sez === "film";
+  const n = film ? 1 : Math.max(1, parseInt(document.getElementById("nStagioni").value) || 1);
+  const ep = film ? 1 : (parseInt(document.getElementById("nEpisodi").value) || null);
+  const x = { id: "tel" + Date.now().toString(36), categoria: sez, tipo: film ? "film" : "serie", titolo, anno: "", copertina: "",
+    voto: null, note: "", stagioni: Array.from({ length: n }, (_, k) => ({ numero: k + 1, episodi_totali: ep, visti: 0, stato: "da_vedere", inizio: null, fine: null })) };
+  L.push(x); chiudi(); salva(x);
+}
+
+carica();
+</script>
+</body>
+</html>

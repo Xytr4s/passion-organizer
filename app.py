@@ -265,6 +265,16 @@ def api_apri(gid):
     return jsonify(ok=False, messaggio="Cartella non trovata"), 404
 
 
+@app.post("/api/apri_link")
+def api_apri_link():
+    """Apre nel browser predefinito solo indirizzi di Google necessari alla configurazione del telefono."""
+    url = (request.json or {}).get("url", "")
+    if url.startswith(("https://sheets.new", "https://docs.google.com/", "https://script.google.com/")):
+        webbrowser.open(url)
+        return jsonify(ok=True)
+    return jsonify(ok=False), 400
+
+
 @app.post("/api/apri_percorso")
 def api_apri_percorso():
     p = request.json["percorso"]
@@ -338,6 +348,42 @@ def api_fonti():
 # ---------------------------------------------------------------- serie TV e anime
 
 import media
+import sincronizza
+
+
+@app.after_request
+def _dopo_modifica(risposta):
+    """Dopo ogni modifica a serie, film e anime: sincronizza con il telefono (se configurato)."""
+    if request.method == "POST" and risposta.status_code < 400 and (
+            request.path.startswith("/api/media/") or request.path == "/api/estensione"):
+        sincronizza.richiedi()
+    return risposta
+
+
+@app.get("/api/telefono")
+def api_telefono():
+    cfg = sincronizza.carica_config()
+    codice = (BASE / "telefono" / "Codice.gs").read_text(encoding="utf-8").replace("__TOKEN__", cfg["token"])
+    pagina = (BASE / "telefono" / "Pagina.html").read_text(encoding="utf-8")
+    link = f"{cfg['url']}?token={cfg['token']}" if cfg.get("url") else ""
+    return jsonify(url=cfg.get("url", ""), ultima=cfg.get("ultima"), esito=cfg.get("esito"), link=link,
+                   codice=codice, pagina=pagina)
+
+
+@app.post("/api/telefono")
+def api_telefono_salva():
+    url = (request.json or {}).get("url", "").strip()
+    if url and not url.startswith("https://script.google.com/"):
+        return jsonify(ok=False, messaggio="L'indirizzo deve iniziare con https://script.google.com/"), 400
+    cfg = sincronizza.carica_config()
+    cfg["url"] = url
+    sincronizza.salva_config(cfg)
+    return jsonify(ok=True)
+
+
+@app.post("/api/telefono/sincronizza")
+def api_telefono_sincronizza():
+    return jsonify(sincronizza.sincronizza())
 
 
 @app.get("/api/media")
@@ -502,6 +548,8 @@ if __name__ == "__main__":
 
     threading.Thread(target=cerca_copertine, daemon=True).start()
     threading.Thread(target=_carica_velocita, daemon=True).start()
+    sincronizza.avvia_in_background()                 # telefono: ogni 5 minuti e dopo ogni modifica
+    sincronizza.richiedi()                            # e una volta all'avvio
     if not scanner.DATI_FILE.exists() or "--avvio" in sys.argv:
         # All'accensione del PC: aggiornamento veloce (ricalcola solo le cartelle cambiate)
         threading.Timer(20 if "--avvio" in sys.argv else 0, scanner.avvia_scansione).start()

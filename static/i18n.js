@@ -314,3 +314,43 @@ Object.assign(TESTI.en, {
   m_aggiungi_titolo_film: "Add movie", m_cerca_lista: "🔍 Search your list…",
   m_fonte_film: "Searching IMDb suggestions (localized titles work too). If you can't find it, use manual entry.",
 });
+
+// ---------------------------------------------------------------- impostazioni: telefono
+Object.assign(TESTI.it, {
+  tel_titolo: "Telefono (serie, film e anime ovunque)",
+  tel_intro: "Collega un Foglio Google: avrai una pagina privata sul telefono con le tue serie, film e anime, e il Gestore si sincronizzerà da solo ogni 5 minuti e dopo ogni modifica. Gratis, una volta sola, circa 5 minuti.",
+  tel_come: "Come si collega (5 minuti)", tel_riconfigura: "Rifai la configurazione",
+  tel_p1: "Crea un Foglio Google vuoto (chiamalo come vuoi, es. “Gestore – serie, film e anime”).",
+  tel_apri_fogli: "Apri Fogli Google",
+  tel_p2: "Nel foglio: menu <b>Estensioni → Apps Script</b>. Cancella il codice che c'è e incolla questo:",
+  tel_copia_codice: "📋 Copia lo script",
+  tel_p3: "Accanto a “File” premi <b>+ → HTML</b>, chiamalo esattamente <b>Pagina</b>, cancella il contenuto e incolla:",
+  tel_copia_pagina: "📋 Copia la pagina",
+  tel_p4: "Premi 💾 Salva, poi <b>Esegui il deployment → Nuovo deployment</b> → ingranaggio → <b>App web</b>. “Esegui come”: <b>Me</b>; “Chi ha accesso”: <b>Chiunque</b>. Premi Esegui il deployment e autorizza con il tuo account Google (alla schermata “Google non ha verificato l'app” scegli Avanzate → Vai al progetto).",
+  tel_p5: "Copia l'<b>URL dell'app web</b> (finisce con /exec), incollalo qui e premi Salva:",
+  tel_salva: "Salva e sincronizza",
+  tel_p6: "Apri sul telefono il link che compare qui sopra (mandalo a te stesso, es. per email) e scegli <b>Aggiungi a schermata Home</b>.",
+  tel_collegato: "Collegato", tel_ultima: "ultima sincronizzazione", tel_mai: "mai",
+  tel_sincronizza_ora: "↻ Sincronizza ora", tel_copia_link: "📋 Copia il link per il telefono",
+  tel_link_info: "Link della tua pagina privata (contiene il codice segreto: non condividerlo):",
+  tel_copiato: "Copiato negli appunti", tel_in_corso: "Sincronizzo…",
+});
+Object.assign(TESTI.en, {
+  tel_titolo: "Phone (series, movies and anime anywhere)",
+  tel_intro: "Connect a Google Sheet: you'll get a private page on your phone with your series, movies and anime, and the Manager syncs by itself every 5 minutes and after every change. Free, one-time, about 5 minutes.",
+  tel_come: "How to connect (5 minutes)", tel_riconfigura: "Set it up again",
+  tel_p1: "Create an empty Google Sheet (any name, e.g. “Manager – series, movies, anime”).",
+  tel_apri_fogli: "Open Google Sheets",
+  tel_p2: "In the sheet: menu <b>Extensions → Apps Script</b>. Delete the existing code and paste this:",
+  tel_copia_codice: "📋 Copy the script",
+  tel_p3: "Next to “Files” press <b>+ → HTML</b>, name it exactly <b>Pagina</b>, delete its content and paste:",
+  tel_copia_pagina: "📋 Copy the page",
+  tel_p4: "Press 💾 Save, then <b>Deploy → New deployment</b> → gear → <b>Web app</b>. “Execute as”: <b>Me</b>; “Who has access”: <b>Anyone</b>. Press Deploy and authorize with your Google account (on “Google hasn't verified this app” choose Advanced → Go to project).",
+  tel_p5: "Copy the <b>Web app URL</b> (ends with /exec), paste it here and press Save:",
+  tel_salva: "Save and sync",
+  tel_p6: "Open the link shown above on your phone (send it to yourself, e.g. by email) and choose <b>Add to Home screen</b>.",
+  tel_collegato: "Connected", tel_ultima: "last sync", tel_mai: "never",
+  tel_sincronizza_ora: "↻ Sync now", tel_copia_link: "📋 Copy the phone link",
+  tel_link_info: "Link to your private page (contains the secret code: don't share it):",
+  tel_copiato: "Copied to clipboard", tel_in_corso: "Syncing…",
+});

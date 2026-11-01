@@ -103,6 +103,7 @@ th{color:var(--tenue);font-weight:500;font-size:12px}
 
 <script src="/static/i18n.js"></script>
 <script src="/static/media.js"></script>
+<script src="/static/telefono.js"></script>
 <script>
 let D = {giochi:[], dischi:[], doppioni:[], cestini:[], fonti:[]};
 let PER_ID = {};
@@ -592,12 +593,14 @@ async function cambiaLingua(l){
 }
 function vImpostazioni(){
   setTimeout(caricaAvvioAuto);
-  return `<div class="blocco"><h3 style="margin-top:0">${t("lingua")} / Language</h3>
+  setTimeout(caricaTelefono);
+  return `<div class="blocco"><h3 style="margin-top:0">🌐 Lingua / Language</h3>
     <select onchange="cambiaLingua(this.value)">${Object.entries(LINGUE).map(([k,n])=>`<option value="${k}" ${LINGUA===k?"selected":""}>${n}</option>`).join("")}</select></div>
     <div class="blocco"><h3 style="margin-top:0">${t("avvio_titolo")}</h3>
     <label style="display:flex;gap:8px;align-items:center;cursor:pointer">
       <input type="checkbox" id="chkAvvio" disabled onchange="cambiaAvvioAuto(this.checked)"> ${t("avvio_chk")}</label>
     <p class="tenue" style="margin-bottom:0">${t("avvio_info")}</p></div>
+    <div class="blocco"><h3 style="margin-top:0">📱 ${t("tel_titolo")}</h3><div id="telefono" class="tenue">…</div></div>
     <div class="blocco"><h3 style="margin-top:0">${t("cartelle_titolo")}</h3>
     <p class="tenue">${t("cartelle_info")}</p>
     <textarea id="fonti" rows="12" style="width:100%;font-family:Consolas,monospace">${esc(D.fonti.join("\n"))}</textarea>

@@ -203,6 +203,7 @@ def elimina(mid):
     with _lock:
         d = carica()
         d["titoli"] = [t for t in d["titoli"] if t["id"] != mid]
+        d.setdefault("eliminati", []).append(mid)     # da comunicare al foglio del telefono
         salva(d)
 
 
