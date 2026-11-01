@@ -41,6 +41,7 @@ function disegnaMedia(categoria){
   el.innerHTML = `
     <div class="filtri">
       <button class="b p" onclick="apriAggiungi('${categoria}')">${t_("m_aggiungi")}</button>
+      ${categoria === "anime" ? `<button class="b" onclick="importaAnimeunity()">⬇ ${t_("au_importa")}</button>` : ""}
       <input placeholder="${t_("m_cerca_lista")}" value="${esc(FM.testo)}" oninput="FM.testo=this.value;disegnaMedia('${categoria}')" style="min-width:200px">
       <select onchange="FM.ord=this.value;disegnaMedia('${categoria}')">${[["aggiornato","m_o_agg"],["titolo","m_o_titolo"],["voto","m_o_voto"],["anno","m_o_anno"]]
         .map(([v,k])=>`<option value="${v}" ${FM.ord===v?"selected":""}>${t_(k)}</option>`).join("")}</select>
@@ -70,6 +71,7 @@ function cardMedia(x){
     <div class="corpo">
       <div class="nome" title="${esc(x.titolo)}">${esc(x.titolo)}</div>
       <div class="meta"><span class="t st-${x.stato}">${t_((x.tipo==="film"?"stf_":"st_")+x.stato)}</span>${x.anno?`<span class="t">${x.anno}</span>`:""}
+        ${x.preferito?`<span class="t" style="color:var(--ko)">❤</span>`:""}
         ${x.tipo==="film" && x.categoria!=="film"?`<span class="t">${t_("m_film")}</span>`:""}${x.voto?`<span class="t">★ ${x.voto}</span>`:""}</div>
       ${x.tipo!=="film" ? `<div class="tenue" style="font-size:12px">${progressoTxt(x)}</div>
         <div class="barra" style="height:5px"><div style="width:${perc}%;background:var(--ok)"></div></div>` : ""}
@@ -154,6 +156,27 @@ async function eliminaMedia(id){
   if (!confirm(t_("m_conferma_elimina"))) return;
   await api(`/api/media/${id}/elimina`, {});
   chiudiModale(); await caricaMedia(); disegnaMedia(sezione);
+}
+
+// ---------------------------------------------------------------- importazione da AnimeUnity
+function importaAnimeunity(){
+  modale(`<h2 style="margin-top:0">⬇ ${t_("au_importa")}</h2>
+    <p class="tenue">${t_("au_info")}</p>
+    <div class="riga"><input id="auUrl" value="${esc(M.profilo_animeunity || "")}" placeholder="https://www.animeunity.co/user/NOME/animelist" style="flex:1">
+      <button class="b p" id="auVai" onclick="eseguiImportAnimeunity()">${t_("au_vai")}</button></div>
+    <div id="auEsito"></div>
+    <div class="riga" style="justify-content:flex-end"><button class="b" onclick="chiudiModale()">${t_("chiudi")}</button></div>`);
+}
+async function eseguiImportAnimeunity(){
+  const url = document.getElementById("auUrl").value.trim();
+  document.getElementById("auVai").disabled = true;
+  document.getElementById("auEsito").innerHTML = `<p class="tenue">${t_("au_in_corso")}</p>`;
+  const r = await api("/api/media/importa_animeunity", {url});
+  document.getElementById("auVai").disabled = false;
+  document.getElementById("auEsito").innerHTML = r.ok
+    ? `<p class="ok">✔ ${t_("au_fatto", {tot: r.totale, nuovi: r.nuovi, agg: r.aggiornati, inv: r.invariati})}</p>`
+    : `<p class="ko">${esc(r.messaggio)}</p>`;
+  await caricaMedia(); disegnaMedia("anime");
 }
 
 // ---------------------------------------------------------------- aggiunta

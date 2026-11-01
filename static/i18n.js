@@ -366,3 +366,17 @@ Object.assign(TESTI.en, {
   vota_salta: "Skip", vota_indietro: "Back", vota_tasti: "Keyboard: 1 good · 2 okay · 3 bad · → skip · ← back · Esc close",
   vota_fatto: "Done! {n} games rated",
 });
+
+// ---------------------------------------------------------------- importazione AnimeUnity
+Object.assign(TESTI.it, {
+  au_importa: "Importa da AnimeUnity", au_vai: "Importa / aggiorna",
+  au_info: "Incolla il link del tuo profilo pubblico. Importa stati, episodi visti, voti e preferiti; se lo rifai in futuro, per ogni anime vince la modifica più recente (sul sito o qui).",
+  au_in_corso: "Leggo il profilo e importo…",
+  au_fatto: "{tot} anime letti: {nuovi} nuovi, {agg} aggiornati, {inv} già aggiornati qui.",
+});
+Object.assign(TESTI.en, {
+  au_importa: "Import from AnimeUnity", au_vai: "Import / update",
+  au_info: "Paste the link to your public profile. Imports statuses, watched episodes, ratings and favorites; if you run it again later, for each anime the most recent change wins (on the site or here).",
+  au_in_corso: "Reading the profile and importing…",
+  au_fatto: "{tot} anime read: {nuovi} new, {agg} updated, {inv} already up to date here.",
+});

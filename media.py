@@ -401,3 +401,94 @@ def conferma(voce_id, mid=None, scheda=None):
         d["da_confermare"] = [x for x in d["da_confermare"] if x["id"] != voce_id]
         salva(d)
     return trova(carica(), mid) if mid else None
+
+
+# ================================================================ importazione da AnimeUnity (profilo pubblico)
+
+STATI_ANIMEUNITY = {"Watching": "in_corso", "Completed": "completata", "Dropped": "droppata",
+                    "Plan To Watch": "da_vedere", "On Hold": "in_pausa", "Paused": "in_pausa"}
+
+
+def leggi_profilo_animeunity(url):
+    """Scarica la lista pubblica di un profilo AnimeUnity (es. https://www.animeunity.co/user/NOME/animelist)."""
+    import html as _html
+    m = re.match(r"^https://(www\.)?animeunity\.[a-z]+/user/[^/]+/animelist/?$", url.strip())
+    if not m:
+        raise ValueError("indirizzo non valido: deve essere https://www.animeunity…/user/NOME/animelist")
+    r = requests.get(url.strip(), headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:130.0) Gecko/20100101 Firefox/130.0",
+                                           "Accept-Language": "it-IT,it;q=0.9"}, timeout=60)
+    r.raise_for_status()
+    m = re.search(r'<anime-list[^>]*?records="(.*?)"', r.text, re.S)
+    if not m:
+        raise ValueError("lista non trovata nella pagina (profilo privato o pagina cambiata)")
+    return json.loads(_html.unescape(m.group(1)))
+
+
+def _data_locale(s):
+    return (s or "").replace(" ", "T")[:19] or None
+
+
+def importa_animeunity(records):
+    """Aggiunge o aggiorna gli anime della lista. Per i titoli già presenti vince la modifica più recente."""
+    unici = {}
+    for r in records:
+        data = ((r.get("pivot") or {}).get("updated_at") or "")
+        vecchio = unici.get(r["id"])
+        if vecchio is None or data > ((vecchio.get("pivot") or {}).get("updated_at") or ""):
+            unici[r["id"]] = r
+    records = list(unici.values())
+    with _lock:
+        d = carica()
+        # ogni voce di AnimeUnity ha un suo codice (la versione doppiata "ITA" è una voce separata con lo stesso codice AniList)
+        per_au = {t["au_id"]: t for t in d["titoli"] if t.get("au_id")}
+        nuovi = aggiornati = invariati = 0
+        for r in records:
+            p = r.get("pivot") or {}
+            stato = STATI_ANIMEUNITY.get(p.get("status"), "da_vedere")
+            # serie finita: episodi totali; serie in onda: solo il totale previsto (se il sito non lo sa, sconosciuto),
+            # perché real_episodes_count sono gli episodi usciti finora e bloccherebbe il conteggio alle nuove uscite
+            if r.get("status") == "Terminato":
+                totali = r.get("episodes_count") or r.get("real_episodes_count") or None
+            else:
+                totali = r.get("episodes_count") or None
+            visti = int(p.get("progress") or 0)
+            if totali and visti > totali:
+                totali = visti                          # dato del sito non aggiornato
+            if stato == "completata":
+                visti = totali or visti
+            elif stato == "da_vedere":
+                visti = 0                               # pianificato: nessun episodio contato
+            aggiornato = _data_locale(p.get("updated_at")) or _data_locale(p.get("created_at")) or "2000-01-01T00:00:00"
+            fonte_id = str(r["anilist_id"]) if r.get("anilist_id") else None
+            au_id = str(r["id"])
+            t = per_au.get(au_id)
+            if t and (t.get("aggiornato") or "") >= aggiornato:
+                invariati += 1                          # modificato nel Gestore dopo l'ultima modifica sul sito
+                continue
+            nomi = [x for x in (r.get("title_eng"), r.get("title"), r.get("title_it")) if x]
+            stagione = nuova_stagione(1, totali, stato)
+            stagione.update(visti=visti, voto=p.get("score") or None,
+                            inizio=(p.get("created_at") or "")[:10] or None,
+                            fine=(p.get("updated_at") or "")[:10] if stato in ("completata", "droppata") else None,
+                            aggiornato=aggiornato)
+            scheda = {
+                "categoria": "anime", "tipo": "film" if r.get("type") == "Movie" else "serie",
+                "titolo": nomi[0] if nomi else r.get("slug", "?"), "titolo_originale": r.get("title") or "",
+                "fonte": "anilist" if r.get("anilist_id") else "animeunity", "fonte_id": fonte_id, "au_id": au_id,
+                "anno": r.get("date"), "copertina": r.get("imageurl"), "trama": (r.get("plot") or "")[:600],
+                "alias": list(dict.fromkeys(nomi)), "voto": p.get("score") or None,
+                "preferito": bool(p.get("favorite")), "stagioni": [stagione],
+            }
+            if t:
+                t.update({k: v for k, v in scheda.items() if k not in ("alias",)})
+                t["alias"] = list(dict.fromkeys(t.get("alias", []) + scheda["alias"]))
+                aggiornati += 1
+            else:
+                t = {"id": uuid.uuid4().hex[:10], "note": "", "creato": adesso(), **scheda}
+                d["titoli"].append(t)
+                per_au[au_id] = t
+                nuovi += 1
+            t["stato"] = stato_generale(t)
+            t["aggiornato"] = aggiornato
+        salva(d)
+    return {"nuovi": nuovi, "aggiornati": aggiornati, "invariati": invariati, "totale": len(records)}

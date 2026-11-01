@@ -450,6 +450,20 @@ def api_media_conferma(voce):
     return jsonify(media.conferma(voce, j.get("id"), j.get("scheda")) or {"ok": False})
 
 
+@app.post("/api/media/importa_animeunity")
+def api_importa_animeunity():
+    url = (request.json or {}).get("url", "").strip()
+    try:
+        records = media.leggi_profilo_animeunity(url)
+    except Exception as e:
+        return jsonify(ok=False, messaggio=str(e)), 400
+    esito = media.importa_animeunity(records)
+    d = media.carica()
+    d["profilo_animeunity"] = url
+    media.salva(d)
+    return jsonify(ok=True, **esito)
+
+
 @app.route("/api/estensione", methods=["POST", "OPTIONS"])
 def api_estensione():
     """Chiamata dall'estensione di Firefox (solo dal PC: il server ascolta su 127.0.0.1)."""
