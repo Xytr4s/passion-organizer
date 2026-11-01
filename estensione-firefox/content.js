@@ -2,6 +2,54 @@
 // così continua a funzionare quando il sito cambia dominio). Dopo N minuti di visione con la scheda in primo
 // piano, manda titolo e indirizzo a PassionOrganizer, che riconosce serie, stagione ed episodio.
 
+const EPISODIO = /\bS\d{1,2}\s*E\d{1,4}\b|\b\d{1,2}x\d{1,4}\b|\b(episodio|episode|ep)\.?\s*\d{1,4}\b/i;
+const NUMERO_EP = /^(?:ep(?:isodio|isode)?\.?\s*)?(\d{1,4})$/i;
+
+// Molti siti non scrivono l'episodio nel titolo della scheda: lo si trova nel pulsante dell'episodio
+// evidenziato (classe "active", "current", "selected"…) dentro l'elenco degli episodi.
+function episodioEvidenziato() {
+  const sel = '[class*="active"],[class*="current"],[class*="selected"],[aria-current="true"],[aria-current="page"],[aria-selected="true"]';
+  let ripiego = null;
+  for (const el of document.querySelectorAll(sel)) {
+    const m = (el.innerText || "").trim().match(NUMERO_EP);
+    if (!m) continue;
+    // preferisce quelli dentro un contenitore che parla di episodi
+    for (let p = el, i = 0; p && i < 6; p = p.parentElement, i++) {
+      if (/episod/i.test(`${p.id || ""} ${typeof p.className === "string" ? p.className : ""}`)) return +m[1];
+    }
+    if (ripiego == null) ripiego = +m[1];
+  }
+  return ripiego;
+}
+
+function titoloPagina() {
+  const og = document.querySelector('meta[property="og:title"]')?.content || "";
+  const h1 = document.querySelector("h1")?.innerText || "";
+  const h2 = document.querySelector("h2")?.innerText || "";
+  const candidati = [document.title, og, `${h1} ${h2}`.trim()].filter(Boolean);
+  const conEpisodio = candidati.find(c => EPISODIO.test(c));
+  if (conEpisodio) return conEpisodio;
+  const n = episodioEvidenziato();
+  const nome = (h1 || og || document.title).trim();
+  return n != null ? `${nome} Episodio ${n}` : document.title;
+}
+
+// cosa si vede nella pagina, per capire i siti che non vengono riconosciuti
+function diagnostica() {
+  const testi = [...document.querySelectorAll('[class*="active"],[class*="current"],[class*="selected"],[aria-current]')]
+    .map(el => `${el.tagName.toLowerCase()}.${typeof el.className === "string" ? el.className.trim().replace(/\s+/g, ".") : ""}: ${(el.innerText || "").trim().slice(0, 40)}`)
+    .filter(t => !t.endsWith(": ")).slice(0, 15);
+  return { titolo_scheda: document.title, og: document.querySelector('meta[property="og:title"]')?.content || "",
+           h1: document.querySelector("h1")?.innerText?.slice(0, 120) || "", h2: document.querySelector("h2")?.innerText?.slice(0, 120) || "",
+           evidenziati: testi };
+}
+
+// il riquadro dell'estensione chiede cosa c'è in questa pagina (funziona anche su un sito appena aggiunto)
+browser.runtime.onMessage.addListener(msg => {
+  if (msg.tipo !== "pagina") return;
+  return Promise.resolve({ titolo: titoloPagina(), url: location.href, diagnostica: diagnostica() });
+});
+
 (async () => {
   const imp = await browser.runtime.sendMessage({ tipo: "impostazioni" });
   if (!imp || !imp.siti) return;
@@ -9,19 +57,10 @@
   const sito = imp.siti.find(s => s.parola && host.includes(s.parola.toLowerCase()));
   if (!sito) return;
 
-  const EPISODIO = /\bS\d{1,2}\s*E\d{1,4}\b|\b\d{1,2}x\d{1,4}\b|\b(episodio|episode|ep)\.?\s*\d{1,4}\b/i;
   let indirizzo = location.href, secondi = 0, inviato = false;
 
-  function titoloPagina() {
-    const og = document.querySelector('meta[property="og:title"]')?.content || "";
-    const h1 = document.querySelector("h1")?.innerText || "";
-    const h2 = document.querySelector("h2")?.innerText || "";
-    const candidati = [document.title, og, `${h1} ${h2}`.trim()].filter(Boolean);
-    return candidati.find(c => EPISODIO.test(c)) || document.title;
-  }
-
   function pagina() {
-    return { titolo: titoloPagina(), url: location.href, sito: sito.parola, categoria: sito.categoria };
+    return { titolo: titoloPagina(), url: location.href, sito: sito.parola, categoria: sito.categoria, diagnostica: diagnostica() };
   }
 
   function avviso(testo, pulsanti = []) {

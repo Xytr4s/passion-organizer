@@ -17,3 +17,4 @@ stagioni_cache/
 dist/
 build/
 *.spec
+estensione_ultima.json

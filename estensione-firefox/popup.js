@@ -44,10 +44,20 @@ async function analizzaScheda() {
     $("analisi").innerHTML = '<span class="tenue">Sito non seguito.</span>';
     return;
   }
-  const pagina = { titolo: scheda.title, url: scheda.url, sito: sito.parola, categoria: sito.categoria };
+  let letto = null;
+  try { letto = await browser.tabs.sendMessage(scheda.id, { tipo: "pagina" }); } catch (e) { /* pagina da ricaricare */ }
+  const pagina = { titolo: letto?.titolo || scheda.title, url: scheda.url, sito: sito.parola, categoria: sito.categoria,
+                   diagnostica: letto?.diagnostica };
   const a = await browser.runtime.sendMessage({ tipo: "analizza", pagina });
   if (!a || a.errore) { $("analisi").innerHTML = `<span class="ko">${a?.errore || "Errore"}</span>`; return; }
-  if (a.episodio == null) { $("analisi").textContent = "Nessun episodio riconosciuto in questa pagina."; return; }
+  if (a.episodio == null) {
+    $("analisi").textContent = "Nessun episodio riconosciuto in questa pagina.";
+    const d = document.createElement("div");
+    d.className = "tenue";
+    d.textContent = letto ? `Letto: ${pagina.titolo}` : "Ricarica la pagina (F5) e riapri questo riquadro.";
+    $("analisi").appendChild(d);
+    return;
+  }
   const ep = `${a.stagione ? "S" + a.stagione + " " : ""}ep ${a.episodio}`;
   $("analisi").textContent = `${a.in_lista || a.titolo} · ${ep}` + (a.in_lista ? ` (in lista, visti ${a.visti ?? 0})` : " (non in lista)");
   $("segna").disabled = false;

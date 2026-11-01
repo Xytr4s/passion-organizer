@@ -591,6 +591,12 @@ def api_estensione_analizza():
     titolo, stagione, ep = media.analizza_pagina(j.get("titolo", ""), j.get("url", ""), j.get("sito", ""))
     if j.get("categoria") == "film" and titolo:
         stagione, ep = 1, 1
+    try:          # solo sul PC dell'utente, per capire i siti che non vengono riconosciuti
+        (BASE / "estensione_ultima.json").write_text(json.dumps(
+            {**j, "riconosciuto": {"titolo": titolo, "stagione": stagione, "episodio": ep}},
+            indent=2, ensure_ascii=False), encoding="utf-8")
+    except OSError:
+        pass
     t, punti = media.abbina(media.carica(), titolo, j.get("categoria"))
     trovato = t if t and punti >= 0.85 else None
     return jsonify(titolo=titolo, stagione=stagione, episodio=ep,
