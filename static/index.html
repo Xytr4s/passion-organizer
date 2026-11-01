@@ -105,7 +105,7 @@ function similiDi(g){
 }
 const statoInst = g => installatoDi(g).length ? "match" : similiDi(g).length ? "forse" : "nomatch";
 let vista = "libreria";
-const F = {testo:"", disco:"", tipo:"", ord:"nome"};
+const F = {testo:"", disco:"", tipo:"", ord:"nome", voto:""};
 let limite = 200;
 
 const isInst = g => g.tipo==="installer" || g.tipo==="archivio";
@@ -162,6 +162,31 @@ function copertina(g){
   const img = g.copertina ? `<img loading="lazy" src="https://cdn.akamai.steamstatic.com/steam/apps/${g.copertina}/header.jpg" onerror="this.remove()">` : "";
   return `<div class="cop">${iniz}${img}</div>`;
 }
+// Cornice secondo il voto: bello = ondulata spessa, sufficiente = ondulata, brutto = dente di sega.
+// Il colore resta quello dello stato installer (verde/giallo/blu). Disegnata con border-image (SVG generato).
+const COLORI_CORNICE = {match:"#3ecf8e", forse:"#f5b84d", nomatch:"#3d7bff", "":"#6b7287"};
+const _cacheBordi = {};
+function bordoVoto(voto, colore){
+  const k = voto + colore;
+  if (_cacheBordi[k]) return _cacheBordi[k];
+  const spessa = voto === "bello", onda = voto !== "brutto";
+  const w = spessa ? 2.8 : 1.7;
+  // punti lungo ogni lato, da 4 a 20 px: il tratto centrale (8-16) contiene esattamente un periodo, così si ripete senza giunture
+  const passi = onda ? Array.from({length: 33}, (_, k) => 4 + k * 0.5)
+                     : [4, 11.4, 12, 19.4, 20];                       // dente di sega: salita lunga, caduta netta (periodo 8)
+  const linea = (f) => passi.map((i, k) => (k ? "L" : "M") + f(i)).join("");
+  const sp = i => onda ? 2.2 * Math.sin((i - 4) / 8 * 2 * Math.PI)
+                       : (((i - 4) % 8) / 8 * 6.4 - 3.2);             // da -3.2 a +3.2 px, poi giù di colpo
+  const d = linea(i => `${i.toFixed(1)},${(4 + sp(i)).toFixed(2)}`) + linea(i => `${i.toFixed(1)},${(20 + sp(i)).toFixed(2)}`)
+          + linea(i => `${(4 + sp(i)).toFixed(2)},${i.toFixed(1)}`) + linea(i => `${(20 + sp(i)).toFixed(2)},${i.toFixed(1)}`);
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24'><path d='${d}' fill='none' stroke='${colore}' stroke-width='${w}' stroke-linejoin='round' stroke-linecap='round'/></svg>`;
+  const larg = spessa ? 10 : onda ? 7 : 9;
+  // URL senza virgolette (sta dentro l'attributo style="..."): apostrofi e parentesi vanno codificati a mano
+  const dati = encodeURIComponent(svg).replace(/'/g, "%27").replace(/\(/g, "%28").replace(/\)/g, "%29");
+  return _cacheBordi[k] = `border:${larg}px solid transparent;border-image:url(data:image/svg+xml,${dati}) 8 round;`;
+}
+const ICONA_VOTO = {bello:"👍", sufficiente:"👌", brutto:"👎"};
+
 function card(g){
   const tipo = g.tipo !== "installato" ? tipoTxt(g.tipo) : "";
   const puoGiocare = g.steam || (g.tipo==="installato" && g.exe);
@@ -182,13 +207,15 @@ function card(g){
         : `<span class="t forse" title="${tt(s)}">${t("installer_simile",{nome:esc(s[0].nome)})}</span>`;
     } else etichettaInst = `<span class="t nomatch">${t(isInst(g)?"non_installato":"nessun_installer")}</span>`;
   }
-  return `<div class="card ${cornice}" onclick="dettaglio('${g.id}')">
+  const stileVoto = g.voto ? bordoVoto(g.voto, COLORI_CORNICE[cornice] || COLORI_CORNICE[""]) : "";
+  return `<div class="card ${cornice}" style="${stileVoto}" onclick="dettaglio('${g.id}')">
     ${copertina(g)}
     <div class="corpo">
       <div class="nome" title="${esc(g.nome)}">${esc(g.nome)}</div>
       <div class="meta">
         <span class="t">${g.disco}</span><span class="t">${GB(g.dimensione)}</span>
         ${g.versione?`<span class="t">v${esc(g.versione)}</span>`:""}
+        ${g.voto?`<span class="t" title="${t("voto_"+g.voto)}">${ICONA_VOTO[g.voto]} ${t("voto_"+g.voto)}</span>`:""}
         ${g.steam?`<span class="t steam">Steam</span>`:""}
         ${g.recente?`<span class="t rec">${t("recente")}${g.ordine?" #"+g.ordine:""}</span>`:""}
         ${tipo?`<span class="t inst">${tipo}</span>`:""}${etichettaInst}
@@ -207,6 +234,7 @@ function filtra(lista){
   const q = F.testo.toLowerCase();
   let r = lista.filter(g => (!q || g.nome.toLowerCase().includes(q) || g.nome_cartella.toLowerCase().includes(q))
     && (!F.disco || g.disco===F.disco)
+    && (!F.voto || (F.voto==="senza" ? !g.voto : g.voto===F.voto))
     && (!F.tipo || (F.tipo==="steam" ? g.steam : F.tipo==="giocabili" ? (g.steam || g.tipo==="installato")
         : F.tipo==="con_gioco" ? statoInst(g)==="match" : F.tipo==="forse" ? statoInst(g)==="forse"
         : F.tipo==="senza_gioco" ? statoInst(g)==="nomatch" : g.tipo===F.tipo)));
@@ -224,6 +252,7 @@ function barraFiltri(){
     <input id="cerca" placeholder="${t("cerca")}" value="${esc(F.testo)}" oninput="F.testo=this.value;limite=200;aggiornaGriglia()" style="min-width:240px">
     <select onchange="F.disco=this.value;aggiornaGriglia()"><option value="">${t("tutti_dischi")}</option>${dischi.map(d=>`<option ${F.disco===d?"selected":""}>${d}</option>`).join("")}</select>
     <select onchange="F.tipo=this.value;aggiornaGriglia()">${opzioni(tipi, F.tipo)}</select>
+    <select onchange="F.voto=this.value;aggiornaGriglia()">${opzioni([["","f_voto_tutti"],["bello","f_voto_bello"],["sufficiente","f_voto_sufficiente"],["brutto","f_voto_brutto"],["senza","f_voto_senza"]], F.voto)}</select>
     <select onchange="F.ord=this.value;aggiornaGriglia()">${opzioni([["nome","o_nome"],["dim","o_dim"],["data","o_data"],["disco","o_disco"]], F.ord)}</select>
     <span class="tenue" id="conteggio"></span>
   </div>`;
@@ -322,7 +351,8 @@ async function apri(id){await api("/api/apri/"+id, {})}
 
 function nomePulito(g, conVersione=true){
   let n = g.nome + (conVersione && g.versione ? ` v${g.versione}` : "");
-  if (g.ordine != null) n = String(g.ordine).padStart(4,"0") + "_" + n;  // mantiene la numerazione
+  if (g.prefisso) n = g.prefisso + n;                                    // x0235 / L0236 / 0270_: come scritto da te
+  else if (g.ordine != null) n = String(g.ordine).padStart(4,"0") + "_" + n;
   return n.replace(/[<>:"/\\|?*]/g,"");
 }
 
@@ -344,7 +374,11 @@ function dettaglio(id){
         ${copie?`<p class="warn">${t("copie_avviso",{n:copie.copie.length})}</p>`:""}
       </div>
     </div>
-    <div class="riga" style="margin-top:14px">
+    <div class="riga" style="margin-top:14px"><b>${t("voto")}</b>
+      ${["bello","sufficiente","brutto"].map(v=>`<button class="b ${g.voto===v?"p":""}" onclick="votaGioco('${id}','${v}')">${ICONA_VOTO[v]} ${t("voto_"+v)}</button>`).join("")}
+      ${g.voto?`<button class="b" onclick="votaGioco('${id}',null)">${t("voto_nessuno")}</button>`:""}
+      ${g.voto_nome && g.voto===g.voto_nome ? `<span class="tenue">${t("voto_da_nome")}</span>` : ""}</div>
+    <div class="riga">
       <button class="b p" ${(g.steam||g.exe)?"":"disabled"} onclick="gioca('${id}')">${t("gioca")}</button>
       <button class="b" onclick="apri('${id}')">${t("apri_cartella")}</button>
     </div>
@@ -362,6 +396,10 @@ function dettaglio(id){
       <div class="riga"><button class="b k" onclick="opSingola('${id}','da_parte')">${t("metti_parte_dett")}</button>
         <button class="b k" onclick="opSingola('${id}','elimina')">${t("elimina_def")}</button></div>`}
     <div class="riga" style="justify-content:flex-end"><button class="b" onclick="chiudiModale()">${t("chiudi")}</button></div>`);
+}
+async function votaGioco(id, voto){
+  await api("/api/voto/"+id, {voto});
+  await carica(); dettaglio(id);
 }
 async function scegliExe(id){
   await api("/api/scegli_exe/"+id, {exe:document.getElementById("selExe").value});

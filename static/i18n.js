@@ -284,3 +284,15 @@ Object.assign(TESTI.en, {
   m_aggiungi_btn: "Add", m_cerco: "Searching…", m_aggiungo: "Adding…", m_aggiunto: "Added:",
   m_nessun_risultato: "No results: try another title or manual entry.",
 });
+
+// ---------------------------------------------------------------- voto dei giochi
+Object.assign(TESTI.it, {
+  voto: "Voto:", voto_bello: "Bello", voto_sufficiente: "Sufficiente", voto_brutto: "Brutto", voto_nessuno: "Togli voto",
+  voto_da_nome: "(dal prefisso del nome: x = bello, L = brutto)",
+  f_voto_tutti: "Tutti i voti", f_voto_bello: "👍 Belli", f_voto_sufficiente: "👌 Sufficienti", f_voto_brutto: "👎 Brutti", f_voto_senza: "Senza voto",
+});
+Object.assign(TESTI.en, {
+  voto: "Rating:", voto_bello: "Good", voto_sufficiente: "Okay", voto_brutto: "Bad", voto_nessuno: "Remove rating",
+  voto_da_nome: "(from the name prefix: x = good, L = bad)",
+  f_voto_tutti: "All ratings", f_voto_bello: "👍 Good", f_voto_sufficiente: "👌 Okay", f_voto_brutto: "👎 Bad", f_voto_senza: "Unrated",
+});

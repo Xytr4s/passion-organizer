@@ -106,9 +106,9 @@ def analizza_nome(nome):
     """'0012_Cult.of.the.Lamb.v1.2.7.186-TENOKE' -> (nome pulito, versione, numero d'ordine, tag)."""
     n = nome
     ordine = None
-    m = re.match(r"^(\d{3,5})_(.+)$", n)
+    m = re.match(r"^([xXlL]?)(\d{3,5})[ _](.+)$", n)
     if m:
-        ordine, n = int(m.group(1)), m.group(2)
+        ordine, n = int(m.group(2)), m.group(3)
     n = re.sub(r"\.(rar|zip|7z|iso|exe|msi)$", "", n, flags=re.I)
     tag = []
     for t in re.findall(r"[\[\(]([^\]\)]*)[\]\)]", n):
@@ -150,6 +150,18 @@ def analizza_nome(nome):
 
 
 ROMANI = {"ii": "2", "iii": "3", "iv": "4", "v": "5", "vi": "6", "vii": "7", "viii": "8", "ix": "9", "x": "10"}
+
+
+def prefisso(nome_cartella):
+    """Prefisso di numerazione così com'è scritto (es. "x0235 ", "0270_"), da conservare nelle rinomine."""
+    m = re.match(r"^([xXlL]?\d{3,5}[ _])", nome_cartella)
+    return m.group(1) if m else ""
+
+
+def voto_da_nome(nome_cartella):
+    """Convenzione dell'utente in __ins: x0000 = bello, L0000 = brutto."""
+    p = prefisso(nome_cartella)[:1].lower()
+    return {"x": "bello", "l": "brutto"}.get(p)
 
 
 def chiave(nome_pulito):
@@ -368,6 +380,7 @@ def scansiona(completa=False):
                     ext = os.path.splitext(percorso)[1].lower()
                     g.update(dimensione=os.path.getsize(percorso), exes=[], exe=None,
                              tipo="archivio" if ext in ESTENSIONI_ARCHIVIO else "installer", errore=None)
+            g["prefisso"], g["voto_nome"] = prefisso(nome_cartella), voto_da_nome(nome_cartella)
             g["recente"] = recente
             scelto = cfg["exe_scelti"].get(percorso)
             if scelto:

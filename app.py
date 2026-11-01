@@ -22,6 +22,8 @@ import scanner
 BASE = Path(__file__).resolve().parent
 PORTA = 5577
 COPERTINE_FILE = BASE / "copertine.json"
+VOTI_FILE = BASE / "voti.json"   # chiave del gioco -> "bello" | "sufficiente" | "brutto" | "nessuno"
+VOTI = ("bello", "sufficiente", "brutto")
 
 app = Flask(__name__, static_folder=str(BASE / "static"))
 
@@ -54,7 +56,8 @@ def aggiorna_percorsi(mosse):
             g["exes"] = [nuovo + e[len(vecchio):] if e.lower().startswith(vecchio.lower()) else e for e in g.get("exes", [])]
             if os.path.basename(nuovo) != os.path.basename(vecchio):
                 nome, versione, ordine, tag = scanner.analizza_nome(os.path.basename(nuovo))
-                g.update(nome=nome, chiave=scanner.chiave(nome), versione=versione or g.get("versione"), ordine=ordine)
+                g.update(nome=nome, chiave=scanner.chiave(nome), versione=versione or g.get("versione"), ordine=ordine,
+                         prefisso=scanner.prefisso(os.path.basename(nuovo)), voto_nome=scanner.voto_da_nome(os.path.basename(nuovo)))
         (cache if f"\\{operazioni.NOME_CESTINO}\\".lower() in g["percorso"].lower() else attivi).append(g)
     dati["giochi"], dati["cache"] = attivi, cache[-500:]
     scanner.salva_dati(dati)
@@ -171,8 +174,11 @@ def api_libreria():
     dati = scanner.carica_dati()
     operazioni.FONTI_PROTETTE = set(scanner.carica_config()["fonti"]) | set(scanner.carica_config()["contenitori"])
     cop = carica_copertine()
+    voti = carica_voti()
     for g in dati["giochi"]:
         g["copertina"] = g.get("steam_appid") or cop.get(g["chiave"])
+        v = voti.get(g["chiave"])
+        g["voto"] = None if v == "nessuno" else v or g.get("voto_nome")
     dischi = {}
     for g in dati["giochi"]:
         d = dischi.setdefault(g["disco"], {"disco": g["disco"], "giochi": 0, "occupato": 0})
@@ -277,6 +283,23 @@ def api_esegui():
     controllate = operazioni.anteprima(request.json["ops"], per_id())
     ok = operazioni.esegui(controllate, request.json.get("etichetta", "operazioni"))
     return jsonify(ok=ok, messaggio=None if ok else "C'è già un'operazione in corso")
+
+
+def carica_voti():
+    return json.loads(VOTI_FILE.read_text(encoding="utf-8")) if VOTI_FILE.exists() else {}
+
+
+@app.post("/api/voto/<gid>")
+def api_voto(gid):
+    """Voto del gioco (vale per tutte le sue copie). None = togli il voto, anche quello dato dal prefisso x/L."""
+    g = per_id().get(gid)
+    if not g:
+        return jsonify(ok=False), 404
+    voto = (request.json or {}).get("voto")
+    voti = carica_voti()
+    voti[g["chiave"]] = voto if voto in VOTI else "nessuno"
+    VOTI_FILE.write_text(json.dumps(voti, indent=1, ensure_ascii=False), encoding="utf-8")
+    return jsonify(ok=True, voto=voto if voto in VOTI else None)
 
 
 @app.post("/api/disinstalla_steam/<gid>")
