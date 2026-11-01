@@ -1,11 +1,11 @@
-# 🎮 Gestore Giochi (Game Manager)
+# ✨ PassionOrganizer
 
 🇬🇧 **English** · 🇮🇹 [Italiano](README.it.md)
 
-A Windows app that gathers every game scattered across multiple drives (plain folders, Steam, Amazon, Riot…) into a single
+*Formerly “Gestore Giochi”.* A Windows app that gathers every game scattered across multiple drives (plain folders, Steam, Amazon, Riot…) into a single
 library and keeps it tidy — and tracks the **TV series, movies and anime** you watch, with a Firefox extension and a phone page.
 
-📖 **Full guide in the [wiki](https://github.com/Xytr4s/gestore-giochi/wiki).**
+📖 **Full guide in the [wiki](https://github.com/Xytr4s/passion-organizer/wiki).**
 
 ## Sections (left sidebar)
 
@@ -42,7 +42,7 @@ prefixes in `__ins` (`x0235 …` = good, `L0236 …` = bad); **⭐ Rate unrated 
 - **Anime seasons**: 📅 **Season** shows a MyAnimeList season sorted by MAL score (with legal streaming platforms) and lets you pick
   ▶ Watch / 📌 Plan / ✕ Not interested; 🏆 **Archive** browses every season downloaded in the background (from 2020, then back to 1917),
   plus the next 4 upcoming seasons.
-- **Import from AnimeUnity**: reads a public AnimeUnity profile list (statuses, watched episodes, ratings, favorites).
+- **Import your anime list** from **MyAnimeList** or **AniList** (username) — or from a public AnimeUnity profile — with no duplicates across services.
 
 ## Safety
 
@@ -51,6 +51,9 @@ prefixes in `__ins` (`x0235 …` = good, `L0236 …` = bad); **⭐ Rate unrated 
 - **Steam** games are never moved or deleted by the app. Drive roots and main game folders are protected.
 
 ## Installation
+
+On first launch a **setup wizard** asks for the language and finds your game folders automatically (or choose
+"no games, only series/movies/anime").
 
 ```
 pip install -r requirements.txt
@@ -69,7 +72,7 @@ The interface is available in **Italian** and **English** (*Settings → Languag
 | `operazioni.py` | Preview / run / undo of rename, move, delete |
 | `media.py` | Series / movies / anime tracker, metadata search, extension matching |
 | `sincronizza.py` | Sync with the Google Sheet for the phone |
-| `static/` | Interface (`index.html`, `media.js`, `telefono.js`, `i18n.js`) |
+| `static/` | Interface (`index.html`, `media.js`, `telefono.js`, `benvenuto.js`, `i18n.js`) |
 | `estensione-firefox/` | Firefox extension |
 | `telefono/` | Google Apps Script and phone page |
 

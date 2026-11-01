@@ -1,11 +1,11 @@
-# 🎮 Gestore Giochi
+# ✨ PassionOrganizer
 
 🇬🇧 [English](README.md) · 🇮🇹 **Italiano**
 
-App per Windows che riunisce in un'unica libreria tutti i giochi sparsi su più dischi (cartelle, Steam, Amazon, Riot…) e li tiene
+*Prima si chiamava “Gestore Giochi”.* App per Windows che riunisce in un'unica libreria tutti i giochi sparsi su più dischi (cartelle, Steam, Amazon, Riot…) e li tiene
 in ordine — e tiene traccia di **serie TV, film e anime** che guardi, con un'estensione per Firefox e una pagina per il telefono.
 
-📖 **Guida completa nella [wiki](https://github.com/Xytr4s/gestore-giochi/wiki)** (in inglese).
+📖 **Guida completa nella [wiki](https://github.com/Xytr4s/passion-organizer/wiki)** (in inglese).
 
 ## Sezioni (barra laterale)
 
@@ -42,7 +42,7 @@ dai prefissi delle cartelle in `__ins` (`x0235 …` = bello, `L0236 …` = brutt
 - **Stagioni anime**: 📅 **Stagione** mostra una stagione di MyAnimeList ordinata per voto MAL (con le piattaforme legali) e permette
   ▶ Guardo / 📌 Pianifico / ✕ Non mi interessa; 🏆 **Archivio** raccoglie tutte le stagioni scaricate in background (dal 2020, poi a ritroso
   fino al 1917), più le 4 stagioni in arrivo.
-- **Importazione da AnimeUnity**: legge la lista di un profilo pubblico (stati, episodi visti, voti, preferiti).
+- **Importa la tua lista anime** da **MyAnimeList** o **AniList** (nome utente) — o da un profilo pubblico AnimeUnity — senza doppioni tra servizi.
 
 ## Sicurezza
 
@@ -51,6 +51,9 @@ dai prefissi delle cartelle in `__ins` (`x0235 …` = bello, `L0236 …` = brutt
 - I giochi **Steam** non vengono mai spostati né cancellati dall'app. Radici dei dischi e cartelle principali sono protette.
 
 ## Installazione
+
+Al primo avvio una **configurazione guidata** chiede la lingua e trova da sola le cartelle dei giochi (oppure scegli
+"non ho giochi, solo serie/film/anime").
 
 ```
 pip install -r requirements.txt
@@ -69,7 +72,7 @@ L'interfaccia è disponibile in **italiano** e **inglese** (*Impostazioni → Li
 | `operazioni.py` | Anteprima / esecuzione / annullamento di rinomina, spostamento, eliminazione |
 | `media.py` | Tracker di serie / film / anime, ricerca schede, riconoscimento per l'estensione |
 | `sincronizza.py` | Sincronizzazione con il Foglio Google del telefono |
-| `static/` | Interfaccia (`index.html`, `media.js`, `telefono.js`, `i18n.js`) |
+| `static/` | Interfaccia (`index.html`, `media.js`, `telefono.js`, `benvenuto.js`, `i18n.js`) |
 | `estensione-firefox/` | Estensione per Firefox |
 | `telefono/` | Script di Google Apps Script e pagina per il telefono |
 
