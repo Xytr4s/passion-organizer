@@ -49,13 +49,33 @@ function episodioEvidenziato() {
 // Siti fatti con Inertia (StreamingUnity/StreamingCommunity): il titolo della scheda è solo "Watch Serie" e il
 // player sta in un iframe, ma i dati della pagina (serie, stagione, episodio) sono nella cronologia del browser
 // (aggiornata anche passando all'episodio successivo) o nell'attributo data-page di #app.
+// Il sito toglie data-page dopo aver caricato la pagina: se non si trovano i dati nella pagina viva, si
+// riscarica l'indirizzo e li si legge dall'HTML (una volta per indirizzo).
+let cacheInertia = { url: null, props: null };
+async function aggiornaInertia() {
+  const url = location.href;
+  if (cacheInertia.url === url || propsInertiaVivi()) return;
+  let props = null;
+  try {
+    const html = await (await fetch(url, { credentials: "include" })).text();
+    const el = new DOMParser().parseFromString(html, "text/html").querySelector("#app[data-page]");
+    if (el) props = JSON.parse(el.dataset.page).props || null;
+  } catch (e) {}
+  cacheInertia = { url, props };
+}
+
+function propsInertiaVivi() {
+  try {
+    const s = (window.wrappedJSObject || window).history.state;
+    const p = s?.props ? s : s?.page;        // Inertia 1 salva la pagina così com'è, Inertia 2 dentro "page"
+    if (p?.props?.title) return p.props;
+  } catch (e) {}
+  try { return JSON.parse(document.querySelector("#app[data-page]")?.dataset.page || "null")?.props || null; } catch (e) {}
+  return null;
+}
+
 function propsInertia() {
-  let p = null;
-  try { p = (window.wrappedJSObject || window).history.state?.page; } catch (e) {}
-  if (!p?.props) {
-    try { p = JSON.parse(document.querySelector("#app[data-page]")?.dataset.page || "null"); } catch (e) {}
-  }
-  return p?.props || null;
+  return propsInertiaVivi() || (cacheInertia.url === location.href ? cacheInertia.props : null);
 }
 
 // sullo stesso sito ci sono serie e film: se la pagina è un film si segna come film
@@ -108,7 +128,9 @@ function diagnostica() {
 // il riquadro dell'estensione chiede cosa c'è in questa pagina (funziona anche su un sito appena aggiunto)
 browser.runtime.onMessage.addListener(msg => {
   if (msg.tipo !== "pagina") return;
-  return Promise.resolve({ titolo: titoloPagina(), url: location.href, diagnostica: diagnostica() });
+  // solo sulle pagine che sembrano fatte con Inertia (contenitore #app), per non riscaricare pagine qualsiasi
+  const prima = document.getElementById("app") ? aggiornaInertia() : Promise.resolve();
+  return prima.then(() => ({ titolo: titoloPagina(), url: location.href, diagnostica: diagnostica() }));
 });
 
 (async () => {
@@ -120,6 +142,7 @@ browser.runtime.onMessage.addListener(msg => {
 
   let indirizzo = location.href, secondi = 0, inviato = false;
   const categoria = () => (filmInertia() ? "film" : sito.categoria);
+  if (document.getElementById("app")) aggiornaInertia();
 
   function pagina() {
     return { titolo: titoloPagina(), url: location.href, sito: sito.parola, categoria: categoria(), diagnostica: diagnostica() };
@@ -161,6 +184,7 @@ browser.runtime.onMessage.addListener(msg => {
 
   async function quandoVisto() {
     inviato = true;
+    if (document.getElementById("app")) await aggiornaInertia();
     const a = await browser.runtime.sendMessage({ tipo: "analizza", pagina: pagina() });
     if (!a || a.errore || a.episodio == null) return;          // non è la pagina di un episodio
     if (imp.modalita === "conferma") {
