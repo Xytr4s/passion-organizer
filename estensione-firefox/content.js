@@ -84,6 +84,15 @@ function filmInertia() {
   return t?.type === "movie" ? (t.name || t.original_name || null) : null;
 }
 
+// Una pagina è un film (anche su un sito impostato come serie) se lo dicono i dati del sito, l'indirizzo
+// (".../movie/...", ".../movies/48171-the-rite", ".../film/...") o il titolo principale ("… — Movie Online").
+function paginaFilm() {
+  if (filmInertia()) return true;
+  if (/\/(?:movies?|films?)(?:\/|$)/i.test(location.pathname)) return true;
+  const h1 = document.querySelector("h1")?.innerText || "";
+  return /[—–-]\s*movie\b/i.test(h1) && !EPISODIO.test(h1);
+}
+
 function datiInertia() {
   const pr = propsInertia();
   const film = filmInertia();
@@ -130,7 +139,7 @@ browser.runtime.onMessage.addListener(msg => {
   if (msg.tipo !== "pagina") return;
   // solo sulle pagine che sembrano fatte con Inertia (contenitore #app), per non riscaricare pagine qualsiasi
   const prima = document.getElementById("app") ? aggiornaInertia() : Promise.resolve();
-  return prima.then(() => ({ titolo: titoloPagina(), url: location.href, film: !!filmInertia(), diagnostica: diagnostica() }));
+  return prima.then(() => ({ titolo: titoloPagina(), url: location.href, film: paginaFilm(), diagnostica: diagnostica() }));
 });
 
 (async () => {
@@ -141,7 +150,7 @@ browser.runtime.onMessage.addListener(msg => {
   if (!sito) return;
 
   let indirizzo = location.href, secondi = 0, inviato = false;
-  const categoria = () => (filmInertia() ? "film" : sito.categoria);
+  const categoria = () => (paginaFilm() ? "film" : sito.categoria);
   if (document.getElementById("app")) aggiornaInertia();
 
   function pagina() {
