@@ -89,6 +89,10 @@ function filmInertia() {
 function paginaFilm() {
   if (filmInertia()) return true;
   if (/\/(?:movies?|films?)(?:\/|$)/i.test(location.pathname)) return true;
+  // Prime Video: stesso indirizzo /detail/… per film e serie; i film hanno la durata ("1 h 39 min"),
+  // le serie l'elenco degli episodi
+  if (document.querySelector('[data-automation-id="runtime-badge"]') &&
+      !document.querySelector('[data-automation-id="btf-episodes-tab"],[data-automation-id^="ep-title-episode"]')) return true;
   const h1 = document.querySelector("h1")?.innerText || "";
   return /[—–-]\s*movie\b/i.test(h1) && !EPISODIO.test(h1);
 }
