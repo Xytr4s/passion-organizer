@@ -49,13 +49,25 @@ function episodioEvidenziato() {
 // Siti fatti con Inertia (StreamingUnity/StreamingCommunity): il titolo della scheda è solo "Watch Serie" e il
 // player sta in un iframe, ma i dati della pagina (serie, stagione, episodio) sono nella cronologia del browser
 // (aggiornata anche passando all'episodio successivo) o nell'attributo data-page di #app.
-function datiInertia() {
+function propsInertia() {
   let p = null;
   try { p = (window.wrappedJSObject || window).history.state?.page; } catch (e) {}
   if (!p?.props) {
     try { p = JSON.parse(document.querySelector("#app[data-page]")?.dataset.page || "null"); } catch (e) {}
   }
-  const pr = p?.props;
+  return p?.props || null;
+}
+
+// sullo stesso sito ci sono serie e film: se la pagina è un film si segna come film
+function filmInertia() {
+  const t = propsInertia()?.title;
+  return t?.type === "movie" ? (t.name || t.original_name || null) : null;
+}
+
+function datiInertia() {
+  const pr = propsInertia();
+  const film = filmInertia();
+  if (film) return film;
   const ep = pr?.episode;
   if (!ep || ep.number == null) return null;
   const nome = pr.title?.name || pr.title?.original_name || "";
@@ -107,9 +119,10 @@ browser.runtime.onMessage.addListener(msg => {
   if (!sito) return;
 
   let indirizzo = location.href, secondi = 0, inviato = false;
+  const categoria = () => (filmInertia() ? "film" : sito.categoria);
 
   function pagina() {
-    return { titolo: titoloPagina(), url: location.href, sito: sito.parola, categoria: sito.categoria, diagnostica: diagnostica() };
+    return { titolo: titoloPagina(), url: location.href, sito: sito.parola, categoria: categoria(), diagnostica: diagnostica() };
   }
 
   function avviso(testo, pulsanti = []) {
@@ -141,7 +154,7 @@ browser.runtime.onMessage.addListener(msg => {
   async function segna() {
     const r = await browser.runtime.sendMessage({ tipo: "segna", pagina: pagina() });
     if (!r || r.errore) return avviso("📺 " + (r?.errore || "Errore"));
-    const ep = sito.categoria === "film" ? "(film)" : `${r.stagione ? "S" + r.stagione + " " : ""}ep ${r.episodio}`;
+    const ep = categoria() === "film" ? "(film)" : `${r.stagione ? "S" + r.stagione + " " : ""}ep ${r.episodio}`;
     if (r.esito === "aggiornato") avviso(`✔ Segnato in PassionOrganizer: ${r.titolo} · ${ep}`);
     else if (r.esito === "da_confermare") avviso(`📥 "${r.titolo}" ${ep} non è in lista: lo trovi da confermare in PassionOrganizer.`);
   }
@@ -151,7 +164,7 @@ browser.runtime.onMessage.addListener(msg => {
     const a = await browser.runtime.sendMessage({ tipo: "analizza", pagina: pagina() });
     if (!a || a.errore || a.episodio == null) return;          // non è la pagina di un episodio
     if (imp.modalita === "conferma") {
-      const ep = sito.categoria === "film" ? "(film)" : `${a.stagione ? "S" + a.stagione + " " : ""}ep ${a.episodio}`;
+      const ep = categoria() === "film" ? "(film)" : `${a.stagione ? "S" + a.stagione + " " : ""}ep ${a.episodio}`;
       avviso(`📺 Segnare "${a.in_lista || a.titolo}" ${ep} in PassionOrganizer?`, [["Sì", segna], ["No", null]]);
     } else {
       segna();
