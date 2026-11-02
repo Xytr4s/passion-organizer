@@ -31,8 +31,8 @@ Doppio clic: una breve configurazione trova le cartelle dei giochi. I dati vengo
 | 📺 **Serie TV** | Stagioni ed episodi visti, stati (in corso, da vedere, in pausa, completata, droppata all'episodio N), voti, note |
 | 🎬 **Film** | Da vedere / Visto / Droppato, locandine dai suggerimenti di IMDb |
 | ⛩️ **Anime** | Come le serie, dati da AniList |
-| 📊 **Statistiche** | Tempo passato a giocare e a guardare: giorno per giorno con media a 7 giorni e andamento, ore della giornata, mappa settimana × ore, ora di fine serata per giorno della settimana, titoli con più tempo |
-| 😴 **Sonno** | Ore dormite per notte (stimate dall'uso del PC o scritte a mano), debito di sonno, orari, giorno della settimana peggiore, legame con il gioco serale, da dove partire per migliorare |
+| 📊 **Statistiche** | Tempo passato a giocare e a guardare, separato per categoria: settimana per settimana in scala sulle 168 ore (con sonno e resto del tempo da sveglio), giorno per giorno con media a 7 giorni e andamento, ore della giornata, mappa settimana × ore, ora di fine serata per giorno della settimana, titoli con più tempo |
+| 😴 **Sonno** | Ore dormite per notte (stimate dall'uso del PC o scritte a mano), debito di sonno, orari, giorno della settimana peggiore, legame con il gioco serale, da dove partire per migliorare, promemoria dell'ora di stop |
 | ⚙️ Impostazioni | Lingua, avvio con Windows, telefono, cartelle dei giochi |
 
 ### Giochi
@@ -76,6 +76,10 @@ dai prefissi delle cartelle in `__ins` (`x0235 …` = bello, `L0236 …` = brutt
   anche quando il player sta in un riquadro della pagina. Se l'app è chiusa, tiene i dati da parte e li manda dopo.
 - **Sonno**: l'app registra quando usi il PC (tastiera, mouse, giochi, video); la pausa più lunga tra la sera e la mattina è la
   stima della notte. È un massimo (se dopo il PC resti sveglio col telefono dormi meno): gli orari veri si possono scrivere a mano.
+- **Promemoria dell'ora di stop**: se a quell'ora un gioco è in primo piano o un video è in riproduzione, compare un avviso in
+  alto a destra (sopra il gioco, senza togliere il controllo): 15 minuti prima, all'ora di stop e poi ogni 20 minuti, fino alle 5.
+  L'ora è automatica (sveglia media delle ultime 2 settimane − obiettivo di sonno − 1 ora) o fissa; "Ancora 15 min" rimanda.
+  La pagina Sonno mostra sera per sera quando è arrivato l'avviso e quando hai davvero chiuso.
 - I dati restano sul PC, in `tempo.json`, salvati ogni minuto.
 - Per contare, l'app deve essere in esecuzione: chiudendo la finestra **resta attiva in background**; all'avvio di Windows parte
   già in background (la finestra si apre lanciando PassionOrganizer). Per chiuderla del tutto: pulsante ⏻.
@@ -107,7 +111,8 @@ L'interfaccia è disponibile in **italiano** e **inglese** (*Impostazioni → Li
 | `scanner.py` | Scansione dischi, pulizia nomi, versioni, eseguibile principale, Steam, doppioni |
 | `operazioni.py` | Anteprima / esecuzione / annullamento di rinomina, spostamento, eliminazione |
 | `media.py` | Tracker di serie / film / anime, ricerca schede, riconoscimento per l'estensione |
-| `tempo.py` | Tempo di gioco e di visione, uso del PC, statistiche e stima del sonno |
+| `tempo.py` | Tempo di gioco e di visione, uso del PC, statistiche, stima del sonno, promemoria dell'ora di stop |
+| `avviso.py` | Finestrella del promemoria (sempre in primo piano, non prende la tastiera) |
 | `sincronizza.py` | Sincronizzazione con il Foglio Google del telefono |
 | `static/` | Interfaccia (`index.html`, `media.js`, `tempo.js`, `telefono.js`, `benvenuto.js`, `i18n.js`) |
 | `estensione-firefox/` | Estensione per Firefox |

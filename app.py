@@ -717,6 +717,67 @@ def api_tempo_sonno_salva():
     return jsonify(ok=True)
 
 
+TESTI_PROMEMORIA = {
+    "it": {
+        "preavviso": ("⏰ Tra 15 minuti si chiude", "Alle {stop} stop a giochi e video ({titolo}). Cerca un punto di salvataggio "
+                      "e non iniziare un nuovo episodio o una nuova partita."),
+        "stop": ("⏰ Ora di chiudere", "Sono le {adesso}: chiudi {titolo}, così sei a letto entro le {letto} "
+                 "e dormi {obiettivo} ore."),
+        "oltre": ("⏰ Sei oltre l'ora di stop", "Sono le {adesso}, {oltre} minuti dopo le {stop}. Chiudi {titolo}: {sveglia}"),
+        "sveglia": "la sveglia arriva comunque alle {sveglia}.", "sveglia_no": "ogni minuto in più è sonno in meno.",
+        "ok": "Ok, chiudo", "rimanda": "Ancora 15 min",
+    },
+    "en": {
+        "preavviso": ("⏰ Closing in 15 minutes", "At {stop} games and videos stop ({titolo}). Look for a save point "
+                      "and don't start a new episode or match."),
+        "stop": ("⏰ Time to stop", "It's {adesso}: close {titolo}, so you're in bed by {letto} and sleep {obiettivo} hours."),
+        "oltre": ("⏰ You're past stop time", "It's {adesso}, {oltre} minutes after {stop}. Close {titolo}: {sveglia}"),
+        "sveglia": "your alarm still rings at {sveglia}.", "sveglia_no": "every extra minute is less sleep.",
+        "ok": "OK, closing", "rimanda": "15 more min",
+    },
+}
+
+
+def mostra_promemoria(tipo, info):
+    """Apre la finestrella del promemoria (avviso.py) in un processo a sé, sopra il gioco o il video."""
+    lingua = scanner.carica_config().get("lingua", "it")
+    T = TESTI_PROMEMORIA["en" if lingua == "en" else "it"]
+    titolo, testo = T[tipo]
+    valori = {**info, "obiettivo": f"{info['obiettivo']:g}",
+              "sveglia": T["sveglia"].format(sveglia=info["sveglia"]) if info.get("sveglia") else T["sveglia_no"]}
+    dati = json.dumps({"titolo": titolo, "testo": testo.format(**valori), "ok": T["ok"],
+                       "rimanda": T["rimanda"] if tipo != "preavviso" else "", "porta": PORTA}, ensure_ascii=False)
+    if percorsi.CONGELATO:
+        cmd = [str(percorsi.ESEGUIBILE), "--promemoria", dati]
+    else:
+        cmd = [str(Path(sys.executable).with_name("pythonw.exe")), str(RISORSE / "avviso.py"), dati]
+    subprocess.Popen(cmd, creationflags=subprocess.CREATE_NO_WINDOW)
+
+
+@app.get("/api/tempo/promemoria")
+def api_tempo_promemoria():
+    return jsonify(tempo.promemoria_info())
+
+
+@app.post("/api/tempo/promemoria")
+def api_tempo_promemoria_salva():
+    """{attivo}, {ora: "HH:MM" o "" per l'ora automatica}, {rimanda: minuti} (dalla finestrella) o {prova: true}."""
+    j = request.get_json(force=True, silent=True) or {}
+    try:
+        if j.get("rimanda"):
+            if tempo.promemoria:
+                tempo.promemoria.rimanda(max(5, min(60, int(j["rimanda"]))))
+        elif j.get("prova"):
+            info = tempo.promemoria_info()
+            mostra_promemoria("stop", {**info, "titolo": tempo.video_in_corso() or "Elden Ring", "oltre": 0,
+                                       "adesso": info["stop"]})
+        else:
+            tempo.imposta_promemoria(j.get("attivo"), j.get("ora"))
+    except (ValueError, TypeError):
+        return jsonify(ok=False, messaggio="Orari non validi"), 400
+    return jsonify(ok=True, **tempo.promemoria_info())
+
+
 # ---------------------------------------------------------------- avvio automatico con Windows
 
 def collegamento_avvio():
@@ -791,6 +852,10 @@ def avvia_server():
 
 
 if __name__ == "__main__":
+    if "--promemoria" in sys.argv:                    # .exe: finestrella del promemoria (avviso.py)
+        import avviso
+        avviso.mostra(json.loads(sys.argv[sys.argv.index("--promemoria") + 1]))
+        sys.exit()
     url = f"http://127.0.0.1:{PORTA}"
     usa_browser = "--browser" in sys.argv
     if sys.stdout is None:  # avviata con pythonw: log su file
@@ -805,7 +870,7 @@ if __name__ == "__main__":
             webview.start()
         sys.exit()
 
-    tempo.avvia_controllo(giochi)                     # tempo di gioco: gioco in primo piano ogni 15 s
+    tempo.avvia_controllo(giochi, mostra_promemoria)  # tempo di gioco ogni 15 s e promemoria dell'ora di stop
     threading.Thread(target=cerca_copertine, daemon=True).start()
     threading.Thread(target=_carica_velocita, daemon=True).start()
     sincronizza.avvia_in_background()                 # telefono: ogni 5 minuti e dopo ogni modifica

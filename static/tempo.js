@@ -130,7 +130,7 @@ function graficoImpilato(id, righe, cats, {formato = v => v, altezza = 220, line
 }
 
 // ------------------------------------------------------------ Statistiche
-const ST = {giorni: 30, cats: new Set(CAT_TEMPO), dati: null, tabella: false};
+const ST = {giorni: 30, cats: new Set(CAT_TEMPO), dati: null, tabella: false, tabellaSett: false};
 function vStatistiche(){
   setTimeout(caricaStatistiche);
   return `<div id="zonaStat" class="vuoto">…</div>`;
@@ -182,7 +182,7 @@ function disegnaStatistiche(){
     <div class="tile"><div class="tenue">${t("st_record")}</div><div class="num">${record ? durataTxt(record.v) : "—"}</div><div class="tenue">${record ? giornoBreve(record.g.data) : ""}</div></div>
     <div class="tile"><div class="tenue">${t("st_trend")}</div><div class="num piccolo">${trend}</div></div></div>`;
 
-  el.innerHTML = filtri + tiles + `
+  el.innerHTML = filtri + tiles + bloccoSettimane(D, cats) + `
     <div class="blocco"><div class="tit-graf">${t("st_g_giorni")}</div><div class="tenue sotto">${t("st_g_giorni_info")}</div>${legenda(cats)}<div id="gGiorni"></div>
       <div class="riga"><button class="b" onclick="ST.tabella=!ST.tabella;disegnaStatistiche()">${t(ST.tabella ? "st_nascondi_tab" : "st_mostra_tab")}</button></div>
       ${ST.tabella ? tabellaGiorni(D, cats, totGiorno) : ""}</div>
@@ -283,6 +283,75 @@ function titoliTop(D, cats){
       <span class="val-t">${durataTxt(x.secondi)}</span></div>`).join("");
 }
 
+// ------------------------------------------------------------ la settimana come scala
+// Ogni settimana è una barra lunga 168 ore: giochi, serie, film e anime, poi il resto del tempo da sveglio,
+// il sonno e (per la settimana in corso) le ore che devono ancora passare. Le percentuali sono sul tempo da sveglio.
+const COL_SONNO = "#4b5468";
+const perc = x => !isFinite(x) ? "—" : `${(x * 100).toFixed(x < 0.1 ? 1 : 0)}%`;
+const fineSett = iso => { const d = new Date(iso + "T12:00"); d.setDate(d.getDate() + 6); return d.toISOString().slice(0, 10); };
+function bloccoSettimane(D, cats){
+  const W = (D.settimane || []).slice().reverse();          // la più recente in alto
+  if (!W.length) return "";
+  const cur = W[0], totCur = cats.reduce((a, c) => a + cur[c], 0);
+  const tiles = `<div class="tiles">${cats.map(c => `<div class="tile"><div class="tenue"><i class="qd" style="background:${COL_TEMPO[c]}"></i>${t("sez_" + c)}</div>
+      <div class="num">${durataTxt(cur[c])}</div><div class="tenue">${perc(cur[c] / cur.sveglio)} ${t("st_del_sveglio")}</div></div>`).join("")}
+    <div class="tile"><div class="tenue">${t("st_totale")}</div><div class="num">${durataTxt(totCur)}</div><div class="tenue">${perc(totCur / cur.sveglio)} ${t("st_del_sveglio")} · ${perc(totCur / cur.durata)} ${t("st_della_sett")}</div></div></div>`;
+  const righe = W.map(w => {
+    const tot = cats.reduce((a, c) => a + w[c], 0);
+    const pezzi = [...cats.map(c => [w[c], COL_TEMPO[c], ""]),
+      [Math.max(0, w.sveglio - tot), "var(--pan2)", ""],
+      [w.sonno, COL_SONNO, ""],
+      [w.durata - w.trascorse, "transparent", "futuro"]].filter(x => x[0] > 0);
+    const tt = `<b>${giornoBreve(w.inizio)} – ${giornoBreve(fineSett(w.inizio))}</b><br>` +
+      cats.map(c => `${t("sez_" + c)}: ${durataTxt(w[c])} (${perc(w[c] / w.sveglio)})`).join("<br>") +
+      `<br><b>${t("st_totale")}: ${durataTxt(tot)}</b> · ${perc(tot / w.sveglio)} ${t("st_del_sveglio")}` +
+      `<br>${t("st_sonno_lbl")}: ${durataTxt(w.sonno)}${w.notti_note < w.notti ? ` (${t("st_notti_stimate", {n: w.notti - w.notti_note})})` : ""}` +
+      `<br>${t("st_altro_sveglio")}: ${durataTxt(Math.max(0, w.sveglio - tot))}` +
+      (w.trascorse < w.durata ? `<br>${t("st_futuro")}: ${durataTxt(w.durata - w.trascorse)}` : "");
+    return `<div class="sett-riga" data-tt="${esc(tt)}"><span class="sett-et">${giornoBreve(w.inizio)}</span>
+      <span class="sett-barra">${pezzi.map(([v, col, cl]) => `<i class="${cl}" style="width:${(v / w.durata * 100).toFixed(2)}%;background:${col}"></i>`).join("")}</span>
+      <span class="sett-val"><b>${durataTxt(tot)}</b> <span class="tenue">${perc(tot / w.sveglio)}</span></span></div>`;
+  }).join("");
+  const tabella = ST.tabellaSett ? `<div style="max-height:320px;overflow:auto;margin-top:8px"><table><tr><th>${t("st_sett_col")}</th>${cats.map(c => `<th>${t("sez_" + c)}</th>`).join("")}<th>${t("st_totale")}</th><th>${t("st_perc_sveglio")}</th><th>${t("st_perc_sett")}</th><th>${t("st_sonno_lbl")}</th></tr>
+    ${W.map(w => { const tot = cats.reduce((a, c) => a + w[c], 0);
+      return `<tr><td>${giornoBreve(w.inizio)} – ${giornoBreve(fineSett(w.inizio))}</td>${cats.map(c => `<td>${w[c] ? durataTxt(w[c]) : ""}</td>`).join("")}<td><b>${durataTxt(tot)}</b></td><td>${perc(tot / w.sveglio)}</td><td>${perc(tot / w.durata)}</td><td>${durataTxt(w.sonno)}</td></tr>`; }).join("")}</table></div>` : "";
+  return `<div class="blocco"><div class="tit-graf">${t("st_g_sett")}</div><div class="tenue sotto">${t("st_g_sett_info")}</div>
+    <div class="tenue sotto" style="margin-top:10px">${t("st_questa_sett")}</div>${tiles}
+    <div class="legenda" style="margin-top:12px">${cats.map(c => `<span><i style="background:${COL_TEMPO[c]}"></i>${t("sez_" + c)}</span>`).join("")}
+      <span><i style="background:var(--pan2);border:1px solid var(--bordo)"></i>${t("st_altro_sveglio")}</span><span><i style="background:${COL_SONNO}"></i>${t("st_sonno_lbl")}</span>
+      <span><i class="futuro"></i>${t("st_futuro")}</span></div>
+    <div class="sett-scala"><span class="sett-et"></span><span class="sett-assi">${["", ...Array.from({length: 7}, (_, d) => giornoSett(d))].slice(1).map(g => `<span>${g}</span>`).join("")}</span><span class="sett-val"></span></div>
+    ${righe}
+    <div class="riga"><button class="b" onclick="ST.tabellaSett=!ST.tabellaSett;disegnaStatistiche()">${t(ST.tabellaSett ? "st_nascondi_tab" : "st_mostra_tab")}</button></div>${tabella}</div>`;
+}
+
+// ------------------------------------------------------------ promemoria dell'ora di stop (pagina Sonno)
+function bloccoPromemoria(D){
+  const P = D.promemoria; if (!P) return "";
+  const esito = D.esito || [];
+  const entro = esito.filter(e => e.chiuso && e.minuti_dopo <= 15).length, chiuse = esito.filter(e => e.chiuso).length;
+  const righe = esito.slice().reverse().map(e => `<tr><td>${t("sn_sera_di", {g: giornoSett(e.settimana)})} ${giornoBreve(e.sera)}</td>
+      <td>${oraTxt(e.avviso)}</td><td>${e.chiuso ? oraTxt(e.chiuso) : `<span class="tenue">${t("pr_in_corso")}</span>`}</td>
+      <td>${e.chiuso ? (e.minuti_dopo <= 15 ? `✓ ` : "") + `+${durataTxt(e.minuti_dopo * 60)}` : ""}</td><td>${e.rimandato || ""}</td></tr>`).join("");
+  return `<div class="blocco"><div class="tit-graf">⏰ ${t("pr_titolo")}</div><div class="tenue sotto">${t("pr_info")}</div>
+    <div class="riga" style="gap:14px">
+      <label><input type="checkbox" ${P.attivo ? "checked" : ""} onchange="salvaPromemoria({attivo: this.checked})"> ${t("pr_attivo")}</label>
+      <label class="tenue">${t("pr_ora")} <select onchange="salvaPromemoria({ora: this.value === 'auto' ? '' : SN.dati.promemoria.stop})">
+        <option value="auto" ${P.automatica ? "selected" : ""}>${t("pr_auto")}</option><option value="fissa" ${P.automatica ? "" : "selected"}>${t("pr_fissa")}</option></select></label>
+      ${P.automatica ? `<span><b>${P.stop}</b> <span class="tenue">${P.sveglia ? t("pr_auto_come", {s: P.sveglia, o: P.obiettivo}) : t("pr_auto_pochi")}</span></span>`
+                     : `<input type="time" value="${P.ora}" onchange="salvaPromemoria({ora: this.value})">`}
+      <button class="b" onclick="api('/api/tempo/promemoria', {prova: true})">${t("pr_prova")}</button></div>
+    <div class="tit-graf" style="margin-top:14px;font-size:14px">${t("pr_esito")}</div>
+    ${esito.length ? `<div class="tenue sotto">${t("pr_riassunto", {n: entro, m: chiuse})}</div>
+      <table><tr><th>${t("sn_notte")}</th><th>${t("pr_avviso")}</th><th>${t("pr_chiuso")}</th><th>${t("pr_dopo")}</th><th>${t("pr_rimandato")}</th></tr>${righe}</table>`
+      : `<div class="tenue">${t("pr_esito_vuoto")}</div>`}</div>`;
+}
+async function salvaPromemoria(dati){
+  const r = await api("/api/tempo/promemoria", dati);
+  if (r.ok === false) return toast(tS(r.messaggio));
+  caricaSonno();
+}
+
 // ------------------------------------------------------------ Sonno
 const SN = {giorni: 30, dati: null, modifica: null};
 function vSonno(){
@@ -311,7 +380,7 @@ function disegnaSonno(){
     <span class="spazio"></span><label class="tenue">${t("sn_obiettivo")} <input type="number" min="4" max="12" step="0.25" value="${ob}" style="width:70px" onchange="salvaObiettivo(this.value)"> h</label></div>`;
   const info = `<div class="blocco tenue">${t("sn_come")}</div>`;
   if (!notti.length) {
-    el.innerHTML = filtri + info + `<div class="blocco vuoto">${t("sn_vuoto")}</div>` + listaNotti(D);
+    el.innerHTML = filtri + info + `<div class="blocco vuoto">${t("sn_vuoto")}</div>` + bloccoPromemoria(D) + listaNotti(D);
     return;
   }
   el.innerHTML = filtri + `<div class="tiles">
@@ -320,6 +389,7 @@ function disegnaSonno(){
       <div class="tile"><div class="tenue">${t("sn_sotto")}</div><div class="num">${sotto} / ${notti.length}</div><div class="tenue">${t("sn_notti_reg")}</div></div>
       <div class="tile"><div class="tenue">${t("sn_orari_medi")}</div><div class="num piccolo">${daSeraTxt(lettoMedio)} → ${daSeraTxt(svegliaMedia)}</div></div></div>
     ${consigli(D, notti, svegliaMedia)}
+    ${bloccoPromemoria(D)}
     <div class="blocco"><div class="tit-graf">${t("sn_g_ore")}</div><div class="tenue sotto">${t("sn_g_ore_info")}</div>
       <div class="legenda"><span><i style="background:#3987e5"></i>${t("sn_manuale")}</span><span><i style="background:#3987e5;opacity:.45"></i>${t("sn_stima")}</span><span><i style="background:#e7e9ef;height:2px"></i>${t("sn_obiettivo")}</span></div><div id="gNotti"></div></div>
     <div class="blocco"><div class="tit-graf">${t("sn_g_orari")}</div><div class="tenue sotto">${t("sn_g_orari_info")}</div><div id="gOrari"></div></div>
@@ -413,15 +483,17 @@ function legami(notti, ob){
 }
 
 // da dove partire: orari consigliati calcolati dai tuoi dati (sveglia abituale - obiettivo)
+// gli orari sono gli stessi del promemoria (calcolati dall'app: sveglia delle ultime 2 settimane - obiettivo - 1 ora)
 function consigli(D, notti, svegliaMedia){
-  const ob = D.obiettivo;
-  const letto = svegliaMedia - ob * 60, stop = letto - 60;
+  const P = D.promemoria || {};
+  const stop = P.stop || daSeraTxt(svegliaMedia - D.obiettivo * 60 - 60);
+  const letto = P.letto || daSeraTxt(svegliaMedia - D.obiettivo * 60);
   return `<div class="blocco"><div class="tit-graf">${t("sn_consigli")}</div>
     <div class="tiles" style="margin:8px 0">
-      <div class="tile"><div class="tenue">${t("sn_sveglia_abituale")}</div><div class="num">${daSeraTxt(svegliaMedia)}</div></div>
-      <div class="tile"><div class="tenue">${t("sn_letto_entro")}</div><div class="num">${daSeraTxt(letto)}</div></div>
-      <div class="tile"><div class="tenue">${t("sn_stop_schermi")}</div><div class="num">${daSeraTxt(stop)}</div></div></div>
-    <ul class="consigli">${[1, 2, 3, 4, 5].map(i => `<li>${t("sn_c" + i, {stop: daSeraTxt(stop)})}</li>`).join("")}</ul></div>`;
+      <div class="tile"><div class="tenue">${t("sn_sveglia_abituale")}</div><div class="num">${P.sveglia || daSeraTxt(svegliaMedia)}</div></div>
+      <div class="tile"><div class="tenue">${t("sn_letto_entro")}</div><div class="num">${letto}</div></div>
+      <div class="tile"><div class="tenue">${t("sn_stop_schermi")}</div><div class="num">${stop}</div></div></div>
+    <ul class="consigli">${[1, 2, 3, 4, 5].map(i => `<li>${t("sn_c" + i, {stop})}</li>`).join("")}</ul></div>`;
 }
 
 function listaNotti(D){

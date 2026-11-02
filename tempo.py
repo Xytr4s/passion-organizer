@@ -157,9 +157,16 @@ def registra_attivita(quando=None, durata=PASSO):
         _modificato = True
 
 
-def avvia_controllo(leggi_giochi):
-    """Thread in background: gioco in primo piano e uso del PC ogni 15 s, salvataggio ogni minuto."""
+promemoria = None      # Promemoria attivo (creato da avvia_controllo)
+
+
+def avvia_controllo(leggi_giochi, mostra_promemoria=None):
+    """Thread in background: gioco in primo piano e uso del PC ogni 15 s, salvataggio ogni minuto,
+    promemoria dell'ora di stop."""
+    global promemoria
     giochi = Giochi(leggi_giochi)
+    if mostra_promemoria:
+        promemoria = Promemoria(mostra_promemoria)
 
     def ciclo():
         ultimo_salvataggio = time.time()
@@ -172,6 +179,8 @@ def avvia_controllo(leggi_giochi):
                     registra("giochi", nome, inizio)
                 if nome or secondi_inattivo() < PASSO + 5:
                     registra_attivita(inizio)
+                if promemoria:
+                    promemoria.controlla(nome, inizio)
                 if inizio - ultimo_salvataggio >= 60:
                     salva()
                     ultimo_salvataggio = inizio
@@ -261,12 +270,55 @@ def statistiche(giorni=30):
     return {
         "da": primo.isoformat(), "a": oggi_d.isoformat(), "categorie": list(CATEGORIE),
         "giorni": [{"data": k, **{c: arrot(v[c]) for c in CATEGORIE}} for k, v in per_giorno.items()],
+        "settimane": settimane(primo, sess),
         "ore": {c: [arrot(x) for x in v] for c, v in ore.items()},
         "settimana": {c: [[arrot(x) for x in riga] for riga in v] for c, v in settimana.items()},
         "titoli": sorted(titoli.values(), key=lambda v: -v["secondi"])[:60],
         "serate": serate,
         "registrato_dal": dt.date.fromtimestamp(sess[0]["i"]).isoformat() if sess else None,
     }
+
+
+def settimane(primo, sess=None):
+    """Settimana per settimana (da lunedì a domenica), dalla settimana che contiene `primo` a quella in corso.
+    Per ognuna: secondi per categoria, secondi trascorsi (168 ore, meno per la settimana in corso), sonno delle notti
+    di quella settimana (notti senza dati contate all'obiettivo) e quindi il tempo da sveglio."""
+    sess = sess if sess is not None else _copia_sessioni()
+    oggi_d = dt.date.today()
+    adesso = time.time()
+    lun = primo - dt.timedelta(days=primo.weekday())
+    dati_sonno = sonno((oggi_d - lun).days + 1)
+    ob = dati_sonno["obiettivo"]
+    ore_notte = {n["data"]: n["ore"] for n in dati_sonno["notti"]}
+    out = []
+    while lun <= oggi_d:
+        a = dt.datetime.combine(lun, dt.time()).timestamp()
+        b = dt.datetime.combine(lun + dt.timedelta(days=7), dt.time()).timestamp()
+        w = {"inizio": lun.isoformat(), "durata": round(b - a), "trascorse": round(max(0, min(b, adesso) - a))}
+        for c in CATEGORIE:
+            w[c] = 0
+        for x in sess:
+            if x["f"] > a and x["i"] < b:
+                w[x["c"]] += min(x["f"], b) - max(x["i"], a)
+        note = sonno_s = 0
+        notti = 0
+        for k in range(7):
+            g = lun + dt.timedelta(days=k)
+            if g > oggi_d:
+                break
+            notti += 1
+            ore = ore_notte.get(g.isoformat())
+            if ore is not None:
+                note += 1
+                sonno_s += ore * 3600
+            else:
+                sonno_s += ob * 3600
+        w.update({c: round(w[c]) for c in CATEGORIE})
+        w.update({"sonno": round(min(sonno_s, w["trascorse"])), "notti": notti, "notti_note": note})
+        w["sveglio"] = w["trascorse"] - w["sonno"]
+        out.append(w)
+        lun += dt.timedelta(days=7)
+    return out
 
 
 # ---------------------------------------------------------------- sonno
@@ -359,7 +411,8 @@ def sonno(giorni=60):
             "stima": list(stima) if stima else None, "manuale": m or None,
             "prima": prima, "ultimo_gioco": ultimo_gioco,
         })
-    return {"obiettivo": obiettivo, "notti": notti, "dal": dal}
+    return {"obiettivo": obiettivo, "notti": notti, "dal": dal, "promemoria": promemoria_info(),
+            "esito": esito_promemoria()}
 
 
 def imposta_notte(giorno, letto=None, sveglia=None):
@@ -383,3 +436,179 @@ def imposta_obiettivo(ore):
         _carica()["obiettivo_sonno"] = max(4.0, min(12.0, float(ore)))
         _modificato = True
     salva()
+
+
+
+# ---------------------------------------------------------------- promemoria dell'ora di stop
+
+PREAVVISO = 15        # minuti prima dell'ora di stop: "tra 15 minuti si chiude"
+RIPETI = 20           # dopo l'ora di stop, un nuovo avviso ogni 20 minuti finché giochi o guardi
+FINE_SERA = 11 * 60   # gli avvisi valgono fino alle 5 del mattino (minuti dalle 18:00)
+
+
+def _min_sera(d):
+    """Minuti dalle 18:00 (della sera a cui appartiene `d`)."""
+    return (d.hour * 60 + d.minute - 18 * 60) % 1440
+
+
+def _hhmm(min_sera):
+    m = round(min_sera + 18 * 60) % 1440
+    return f"{m // 60:02d}:{m % 60:02d}"
+
+
+def promemoria_info():
+    """Impostazioni e ora di stop: automatica = sveglia media delle ultime 2 settimane - obiettivo di sonno - 1 ora
+    (servono almeno 3 notti, altrimenti 23:00), oppure l'ora fissa scelta."""
+    with _lock:
+        d = _carica()
+        p = {"attivo": True, "ora": "", **d.get("promemoria", {})}
+        ob = d.get("obiettivo_sonno", OBIETTIVO_SONNO)
+        manuali = dict(d.get("sonno", {}))
+    sveglie = []
+    oggi_d = dt.date.today()
+    for k in range(14):
+        g = oggi_d - dt.timedelta(days=k)
+        m = manuali.get(g.isoformat()) or {}
+        sv = None
+        if m.get("letto") and m.get("sveglia"):
+            try:
+                sv = _da_orari(g, m["letto"], m["sveglia"])[1]
+            except ValueError:
+                pass
+        if sv is None:
+            st = stima_notte(g)
+            sv = st[1] if st else None
+        if sv:
+            s = dt.datetime.fromtimestamp(sv)
+            sveglie.append(s.hour * 60 + s.minute + s.second / 60)
+    sveglia = sum(sveglie) / len(sveglie) if len(sveglie) >= 3 else None
+    if p["ora"]:
+        h, m = map(int, p["ora"].split(":"))
+        stop = (h * 60 + m - 18 * 60) % 1440
+    elif sveglia is not None:
+        stop = min(8 * 60, max(2 * 60, round((sveglia + 6 * 60 - ob * 60 - 60) / 5) * 5))   # tra le 20 e le 2, ai 5 minuti
+    else:
+        stop = 5 * 60                                                        # 23:00
+    return {"attivo": bool(p["attivo"]), "ora": p["ora"], "automatica": not p["ora"], "stop_min": stop,
+            "stop": _hhmm(stop), "letto": _hhmm(stop + 60), "obiettivo": ob,
+            "sveglia": _hhmm(sveglia - 18 * 60) if sveglia is not None else None, "notti_sveglia": len(sveglie)}
+
+
+def imposta_promemoria(attivo=None, ora=None):
+    """attivo: True/False; ora: "HH:MM" fissa, "" = automatica, None = non cambiare."""
+    global _modificato
+    if ora:
+        h, m = map(int, ora.split(":"))
+        if not (0 <= h < 24 and 0 <= m < 60):
+            raise ValueError(ora)
+        ora = f"{h:02d}:{m:02d}"
+    with _lock:
+        p = _carica().setdefault("promemoria", {})
+        if attivo is not None:
+            p["attivo"] = bool(attivo)
+        if ora is not None:
+            p["ora"] = ora
+        _modificato = True
+    salva()
+    if promemoria:
+        promemoria.aggiorna()
+
+
+def registra_promemoria(tipo, quando=None):
+    """Tiene traccia degli avvisi (preavviso, stop, oltre, rimandato) per vedere dopo com'è andata."""
+    global _modificato
+    with _lock:
+        log = _carica().setdefault("promemoria_log", [])
+        log.append([round(quando or time.time()), tipo])
+        del log[:-2000]
+        _modificato = True
+
+
+def video_in_corso(adesso=None):
+    """Titolo del video in riproduzione adesso (dai battiti dell'estensione), o None."""
+    adesso = adesso or time.time()
+    with _lock:
+        for s in reversed(_carica()["sessioni"][-30:]):
+            if s["c"] != "giochi" and adesso - s["f"] <= ATTIVO:
+                return s["t"]
+    return None
+
+
+def esito_promemoria(sere=14):
+    """Per ogni sera con un avviso all'ora di stop: quando è arrivato, quante volte hai rimandato
+    e quando hai davvero chiuso (fine della catena di sessioni di giochi/video che seguono l'avviso)."""
+    with _lock:
+        log = list(_carica().get("promemoria_log", []))
+    sess = _copia_sessioni()
+    per_sera = {}
+    for ts, tipo in log:
+        if tipo == "preavviso":
+            continue
+        sera = (dt.datetime.fromtimestamp(ts) - dt.timedelta(hours=CAMBIO_GIORNO)).date().isoformat()
+        e = per_sera.setdefault(sera, {"sera": sera, "avviso": ts, "avvisi": 0, "rimandato": 0})
+        if tipo == "rimandato":
+            e["rimandato"] += 1
+        else:
+            e["avvisi"] += 1
+            e["avviso"] = min(e["avviso"], ts)
+    adesso = time.time()
+    out = []
+    for e in sorted(per_sera.values(), key=lambda e: e["sera"])[-sere:]:
+        fine = e["avviso"]
+        for s in sess:                                   # le sessioni sono in ordine di inizio
+            if s["f"] > fine and s["i"] <= fine + UNIONE_ATTIVITA:
+                fine = s["f"]
+        e["chiuso"] = fine if adesso - fine > ATTIVO else None   # None = stai ancora giocando/guardando
+        e["minuti_dopo"] = max(0, round((fine - e["avviso"]) / 60))
+        e["settimana"] = dt.date.fromisoformat(e["sera"]).weekday()
+        out.append(e)
+    return out
+
+
+class Promemoria:
+    """Controllato ogni 15 s dal thread del tempo: se un gioco è in primo piano o un video è in riproduzione
+    vicino all'ora di stop, chiama `mostra(tipo, info)` (tipo: preavviso, stop, oltre)."""
+
+    def __init__(self, mostra):
+        self.mostra = mostra
+        self.ultimo = 0
+        self.rimanda_fino = 0
+        self.preavviso_sera = None
+        self._info = (0, None)
+
+    def info(self, adesso):
+        if adesso - self._info[0] > 300 or not self._info[1]:
+            self._info = (adesso, promemoria_info())
+        return self._info[1]
+
+    def aggiorna(self):
+        self._info = (0, None)
+
+    def rimanda(self, minuti=15):
+        self.rimanda_fino = time.time() + minuti * 60
+        self.ultimo = 0                                  # alla fine della pausa l'avviso torna subito
+        registra_promemoria("rimandato")
+
+    def controlla(self, gioco, adesso):
+        titolo = gioco or video_in_corso(adesso)
+        if not titolo:
+            return
+        info = self.info(adesso)
+        if not info["attivo"] or adesso < self.rimanda_fino:
+            return
+        d = dt.datetime.fromtimestamp(adesso)
+        m, stop = _min_sera(d), info["stop_min"]
+        if m >= FINE_SERA:
+            return
+        sera = (d - dt.timedelta(hours=CAMBIO_GIORNO)).date()
+        if stop - PREAVVISO <= m < stop:
+            if self.preavviso_sera != sera:
+                self.preavviso_sera = sera
+                registra_promemoria("preavviso", adesso)
+                self.mostra("preavviso", {**info, "titolo": titolo, "oltre": 0, "adesso": d.strftime("%H:%M")})
+        elif m >= stop and adesso - self.ultimo >= RIPETI * 60:
+            self.ultimo = adesso
+            oltre = round(m - stop)
+            tipo = "stop" if oltre < 5 else "oltre"
+            registra_promemoria(tipo, adesso)
+            self.mostra(tipo, {**info, "titolo": titolo, "oltre": oltre, "adesso": d.strftime("%H:%M")})

@@ -31,8 +31,8 @@ Double-click it: a short setup finds your game folders. Your data is stored in `
 | 📺 **TV Series** | Seasons and episodes watched, statuses (watching, plan to watch, on hold, completed, dropped at episode N), ratings, notes |
 | 🎬 **Movies** | Plan to watch / Watched / Dropped, posters from IMDb suggestions |
 | ⛩️ **Anime** | Like series, data from AniList |
-| 📊 **Stats** | Time spent playing and watching: day by day with 7-day average and trend, hours of the day, week × hours map, end-of-evening time by weekday, titles with the most time |
-| 😴 **Sleep** | Hours slept per night (estimated from PC use or entered by hand), sleep debt, times, worst weekday, link with late gaming, where to start improving |
+| 📊 **Stats** | Time spent playing and watching, split by category: week by week on a 168-hour scale (with sleep and the rest of your waking time), day by day with 7-day average and trend, hours of the day, week × hours map, end-of-evening time by weekday, titles with the most time |
+| 😴 **Sleep** | Hours slept per night (estimated from PC use or entered by hand), sleep debt, times, worst weekday, link with late gaming, where to start improving, stop-time reminder |
 | ⚙️ Settings | Language, start with Windows, phone sync, game folders |
 
 ### Games
@@ -76,6 +76,10 @@ prefixes in `__ins` (`x0235 …` = good, `L0236 …` = bad); **⭐ Rate unrated 
   player is inside a frame of the page. If the app is closed, it keeps the data and sends it later.
 - **Sleep**: the app records when you use the PC (keyboard, mouse, games, videos); the longest break between evening and morning
   is the night's estimate. It is a maximum (if you stay up on your phone after the PC you sleep less): real times can be entered by hand.
+- **Stop-time reminder**: if a game is in the foreground or a video is playing at that time, a notice appears at the top right
+  (over the game, without taking control away): 15 minutes before, at stop time and then every 20 minutes, until 5 am.
+  The time is automatic (average wake-up of the last 2 weeks − sleep goal − 1 hour) or fixed; "15 more min" snoozes.
+  The Sleep page shows, evening by evening, when the notice came and when you actually stopped.
 - Data stays on your PC, in `tempo.json`, saved every minute.
 - To count, the app must be running: closing the window **keeps it running in the background**; at Windows startup it starts
   in the background (open the window by launching PassionOrganizer). To quit completely: the ⏻ button.
@@ -107,7 +111,8 @@ The interface is available in **Italian** and **English** (*Settings → Languag
 | `scanner.py` | Drive scanning, name cleaning, versions, main executable, Steam, duplicates |
 | `operazioni.py` | Preview / run / undo of rename, move, delete |
 | `media.py` | Series / movies / anime tracker, metadata search, extension matching |
-| `tempo.py` | Play and watch time, PC use, stats and sleep estimate |
+| `tempo.py` | Play and watch time, PC use, stats, sleep estimate, stop-time reminder |
+| `avviso.py` | Reminder notice window (always on top, doesn't take the keyboard) |
 | `sincronizza.py` | Sync with the Google Sheet for the phone |
 | `static/` | Interface (`index.html`, `media.js`, `tempo.js`, `telefono.js`, `benvenuto.js`, `i18n.js`) |
 | `estensione-firefox/` | Firefox extension |
