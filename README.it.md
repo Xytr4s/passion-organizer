@@ -54,7 +54,9 @@ dai prefissi delle cartelle in `__ins` (`x0235 …` = bello, `L0236 …` = brutt
 - **Estensione per Firefox** (`estensione-firefox/`): sui siti che scegli (riconosciuti da una parola dell'indirizzo, così funziona
   anche quando cambiano dominio) segna l'episodio o il film guardato dopo N minuti, o chiede prima. I titoli sconosciuti finiscono
   in **Da confermare**. L'episodio viene letto dal titolo della scheda (`S2E4`, `S2:E4`, `3x07`, `Stagione 4, ep. 2`…),
-  dalla barra del player (es. Prime Video) o dall'indirizzo (`?season=1&episode=3`). Siti e impostazioni vengono copiati in automatico
+  dalla barra del player (es. Prime Video), dai dati della pagina o dall'indirizzo (`?season=1&episode=3`).
+  I film vengono riconosciuti anche su un sito impostato per le serie (indirizzo `/movie/`, `/movies/`, `/film/`, pagina con la
+  durata al posto dell'elenco degli episodi, o dati del sito). Siti e impostazioni vengono copiati in automatico
   nell'app (e ripresi dopo una reinstallazione) e si possono esportare / importare come file dal riquadro dell'estensione.
 - **Telefono**: pagina privata collegata a un tuo Foglio Google (Apps Script, gratis). Il Gestore si sincronizza ogni 5 minuti e dopo ogni modifica.
 - **Stagioni anime**: 📅 **Stagione** mostra una stagione di MyAnimeList ordinata per voto MAL (con le piattaforme legali) e permette
