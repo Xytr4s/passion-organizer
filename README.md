@@ -31,6 +31,8 @@ Double-click it: a short setup finds your game folders. Your data is stored in `
 | 📺 **TV Series** | Seasons and episodes watched, statuses (watching, plan to watch, on hold, completed, dropped at episode N), ratings, notes |
 | 🎬 **Movies** | Plan to watch / Watched / Dropped, posters from IMDb suggestions |
 | ⛩️ **Anime** | Like series, data from AniList |
+| 📊 **Stats** | Time spent playing and watching: day by day with 7-day average and trend, hours of the day, week × hours map, end-of-evening time by weekday, titles with the most time |
+| 😴 **Sleep** | Hours slept per night (estimated from PC use or entered by hand), sleep debt, times, worst weekday, link with late gaming, where to start improving |
 | ⚙️ Settings | Language, start with Windows, phone sync, game folders |
 
 ### Games
@@ -64,6 +66,20 @@ prefixes in `__ins` (`x0235 …` = good, `L0236 …` = bad); **⭐ Rate unrated 
   plus the next 4 upcoming seasons.
 - **Import your anime list** from **MyAnimeList** or **AniList** (username) — or from a public AnimeUnity profile — with no duplicates across services.
 
+## Time and sleep
+
+- **Stopwatch**: under each sidebar section you see today's time (green ● while running); at the top, the current title with
+  its stopwatch and today's total.
+- **Games**: every 15 seconds the app checks which program is in the foreground; if it lives in the folder of a game in the
+  catalog (Steam included), that time counts for the game. Switch to the desktop or the browser and it stops.
+- **Series, movies and anime**: the Firefox extension (1.6 or later) counts only while the video is **playing**, even when the
+  player is inside a frame of the page. If the app is closed, it keeps the data and sends it later.
+- **Sleep**: the app records when you use the PC (keyboard, mouse, games, videos); the longest break between evening and morning
+  is the night's estimate. It is a maximum (if you stay up on your phone after the PC you sleep less): real times can be entered by hand.
+- Data stays on your PC, in `tempo.json`, saved every minute.
+- To count, the app must be running: closing the window **keeps it running in the background**; at Windows startup it starts
+  in the background (open the window by launching PassionOrganizer). To quit completely: the ⏻ button.
+
 ## Safety
 
 - Every file operation shows a **preview** first; rename / move / "set aside" can be **undone**.
@@ -91,8 +107,9 @@ The interface is available in **Italian** and **English** (*Settings → Languag
 | `scanner.py` | Drive scanning, name cleaning, versions, main executable, Steam, duplicates |
 | `operazioni.py` | Preview / run / undo of rename, move, delete |
 | `media.py` | Series / movies / anime tracker, metadata search, extension matching |
+| `tempo.py` | Play and watch time, PC use, stats and sleep estimate |
 | `sincronizza.py` | Sync with the Google Sheet for the phone |
-| `static/` | Interface (`index.html`, `media.js`, `telefono.js`, `benvenuto.js`, `i18n.js`) |
+| `static/` | Interface (`index.html`, `media.js`, `tempo.js`, `telefono.js`, `benvenuto.js`, `i18n.js`) |
 | `estensione-firefox/` | Firefox extension |
 | `telefono/` | Google Apps Script and phone page |
 

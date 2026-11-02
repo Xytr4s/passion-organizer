@@ -31,6 +31,8 @@ Doppio clic: una breve configurazione trova le cartelle dei giochi. I dati vengo
 | 📺 **Serie TV** | Stagioni ed episodi visti, stati (in corso, da vedere, in pausa, completata, droppata all'episodio N), voti, note |
 | 🎬 **Film** | Da vedere / Visto / Droppato, locandine dai suggerimenti di IMDb |
 | ⛩️ **Anime** | Come le serie, dati da AniList |
+| 📊 **Statistiche** | Tempo passato a giocare e a guardare: giorno per giorno con media a 7 giorni e andamento, ore della giornata, mappa settimana × ore, ora di fine serata per giorno della settimana, titoli con più tempo |
+| 😴 **Sonno** | Ore dormite per notte (stimate dall'uso del PC o scritte a mano), debito di sonno, orari, giorno della settimana peggiore, legame con il gioco serale, da dove partire per migliorare |
 | ⚙️ Impostazioni | Lingua, avvio con Windows, telefono, cartelle dei giochi |
 
 ### Giochi
@@ -64,6 +66,20 @@ dai prefissi delle cartelle in `__ins` (`x0235 …` = bello, `L0236 …` = brutt
   fino al 1917), più le 4 stagioni in arrivo.
 - **Importa la tua lista anime** da **MyAnimeList** o **AniList** (nome utente) — o da un profilo pubblico AnimeUnity — senza doppioni tra servizi.
 
+## Tempo e sonno
+
+- **Cronometro**: sotto ogni sezione della barra laterale c'è il tempo di oggi (● verde mentre è in corso); in alto, il titolo
+  in corso con il suo cronometro e il totale di oggi.
+- **Giochi**: ogni 15 secondi l'app guarda quale programma è in primo piano; se sta nella cartella di un gioco del catalogo
+  (Steam compreso), quel tempo conta per il gioco. Se passi al desktop o al browser, si ferma.
+- **Serie, film e anime**: l'estensione per Firefox (1.6 o successiva) conta solo mentre il video è **in riproduzione**,
+  anche quando il player sta in un riquadro della pagina. Se l'app è chiusa, tiene i dati da parte e li manda dopo.
+- **Sonno**: l'app registra quando usi il PC (tastiera, mouse, giochi, video); la pausa più lunga tra la sera e la mattina è la
+  stima della notte. È un massimo (se dopo il PC resti sveglio col telefono dormi meno): gli orari veri si possono scrivere a mano.
+- I dati restano sul PC, in `tempo.json`, salvati ogni minuto.
+- Per contare, l'app deve essere in esecuzione: chiudendo la finestra **resta attiva in background**; all'avvio di Windows parte
+  già in background (la finestra si apre lanciando PassionOrganizer). Per chiuderla del tutto: pulsante ⏻.
+
 ## Sicurezza
 
 - Ogni operazione sui file mostra prima un'**anteprima**; rinomina / sposta / "metti da parte" si possono **annullare**.
@@ -91,8 +107,9 @@ L'interfaccia è disponibile in **italiano** e **inglese** (*Impostazioni → Li
 | `scanner.py` | Scansione dischi, pulizia nomi, versioni, eseguibile principale, Steam, doppioni |
 | `operazioni.py` | Anteprima / esecuzione / annullamento di rinomina, spostamento, eliminazione |
 | `media.py` | Tracker di serie / film / anime, ricerca schede, riconoscimento per l'estensione |
+| `tempo.py` | Tempo di gioco e di visione, uso del PC, statistiche e stima del sonno |
 | `sincronizza.py` | Sincronizzazione con il Foglio Google del telefono |
-| `static/` | Interfaccia (`index.html`, `media.js`, `telefono.js`, `benvenuto.js`, `i18n.js`) |
+| `static/` | Interfaccia (`index.html`, `media.js`, `tempo.js`, `telefono.js`, `benvenuto.js`, `i18n.js`) |
 | `estensione-firefox/` | Estensione per Firefox |
 | `telefono/` | Script di Google Apps Script e pagina per il telefono |
 

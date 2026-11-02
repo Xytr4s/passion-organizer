@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
   "name": "PassionOrganizer – Tracker episodi",
-  "version": "1.5.7",
-  "description": "Segna in PassionOrganizer gli episodi di serie TV, film e anime che guardi.",
+  "version": "1.6.0",
+  "description": "Segna in PassionOrganizer gli episodi di serie TV, film e anime che guardi e il tempo passato a guardarli.",
   "browser_specific_settings": {
     "gecko": {
       "id": "tracker-episodi@gestore-giochi.local",
@@ -37,7 +37,8 @@
       "js": [
         "content.js"
       ],
-      "run_at": "document_idle"
+      "run_at": "document_idle",
+      "all_frames": true
     }
   ],
   "browser_action": {

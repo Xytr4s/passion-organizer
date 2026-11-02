@@ -2,6 +2,21 @@
 // così continua a funzionare quando il sito cambia dominio). Dopo N minuti di visione con la scheda in primo
 // piano, manda titolo e indirizzo a PassionOrganizer, che riconosce serie, stagione ed episodio.
 
+// Gira anche dentro i riquadri (iframe) delle pagine, perché spesso il player sta lì. Nei riquadri fa una cosa
+// sola: dice allo sfondo dell'estensione quando un video è in riproduzione (per il tempo di visione).
+const PRINCIPALE = window.top === window;
+
+function videoInRiproduzione() {
+  if (document.visibilityState !== "visible") return false;
+  for (const v of document.querySelectorAll("video")) {
+    if (!v.paused && !v.ended && v.readyState > 2 && v.currentTime > 0) return true;
+  }
+  return false;
+}
+setInterval(() => {
+  if (videoInRiproduzione()) browser.runtime.sendMessage({ tipo: "riproduzione" }).catch(() => {});
+}, 5000);
+
 const EPISODIO = /\bS\d{1,2}\s*[:.\-_]?\s*E\d{1,4}\b|\b\d{1,2}x\d{1,4}\b|\b(episodio|episode|ep)\.?\s*\d{1,4}\b/i;
 const NUMERO_EP = /^(?:ep(?:isodio|isode)?\.?\s*)?(\d{1,4})$/i;
 // scritte del player come "Season 4, Ep. 2 Titolo" o "Stagione 4, ep. 2" (es. Prime Video)
@@ -27,7 +42,7 @@ function scrittaPlayer() {
   if (ora) ultimaScrittaPlayer = ora;
   return ora || ultimaScrittaPlayer;
 }
-setInterval(scrittaPlayer, 4000);
+if (PRINCIPALE) setInterval(scrittaPlayer, 4000);
 
 // Molti siti non scrivono l'episodio nel titolo della scheda: lo si trova nel pulsante dell'episodio
 // evidenziato (classe "active", "current", "selected"…) dentro l'elenco degli episodi.
@@ -139,7 +154,7 @@ function diagnostica() {
 }
 
 // il riquadro dell'estensione chiede cosa c'è in questa pagina (funziona anche su un sito appena aggiunto)
-browser.runtime.onMessage.addListener(msg => {
+if (PRINCIPALE) browser.runtime.onMessage.addListener(msg => {
   if (msg.tipo !== "pagina") return;
   // solo sulle pagine che sembrano fatte con Inertia (contenitore #app), per non riscaricare pagine qualsiasi
   const prima = document.getElementById("app") ? aggiornaInertia() : Promise.resolve();
@@ -147,6 +162,7 @@ browser.runtime.onMessage.addListener(msg => {
 });
 
 (async () => {
+  if (!PRINCIPALE) return;
   const imp = await browser.runtime.sendMessage({ tipo: "impostazioni" });
   if (!imp || !imp.siti) return;
   const host = location.hostname.toLowerCase();
@@ -208,9 +224,17 @@ browser.runtime.onMessage.addListener(msg => {
     }
   }
 
+  // tempo di visione: lo sfondo dell'estensione deve sapere cosa c'è in questa scheda (titolo, episodio),
+  // per registrare il tempo quando il video è in riproduzione. Si aggiorna ogni 15 s e a ogni cambio di pagina.
+  let giri = 0;
+  const comunicaPagina = () => browser.runtime.sendMessage({ tipo: "pagina_video", pagina: pagina() }).catch(() => {});
+  comunicaPagina();
+
   // conta solo il tempo con la scheda visibile; ricomincia se l'indirizzo cambia (episodio successivo)
   setInterval(() => {
-    if (location.href !== indirizzo) { indirizzo = location.href; secondi = 0; inviato = false; }
+    const cambiata = location.href !== indirizzo;
+    if (cambiata || ++giri % 3 === 0) comunicaPagina();
+    if (cambiata) { indirizzo = location.href; secondi = 0; inviato = false; }
     if (!inviato && document.visibilityState === "visible") {
       secondi += 5;
       if (secondi >= imp.minuti * 60) quandoVisto();

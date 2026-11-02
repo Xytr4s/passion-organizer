@@ -24,7 +24,7 @@ button:disabled{opacity:.5;cursor:default}
 main{padding:16px 18px 60px}
 #corpo{display:flex;align-items:flex-start}
 #lato{position:sticky;top:57px;height:calc(100vh - 57px);width:92px;flex:0 0 92px;background:var(--pan);border-right:1px solid var(--bordo);
-  display:flex;flex-direction:column;gap:6px;padding:12px 8px;box-sizing:border-box}
+  display:flex;flex-direction:column;gap:4px;padding:10px 8px;box-sizing:border-box;overflow-y:auto}
 #contenuto{flex:1;min-width:0}
 #nav{padding:10px 18px 0}
 #nav:empty{display:none}
@@ -81,12 +81,46 @@ th{color:var(--tenue);font-weight:500;font-size:12px}
 .t.st-in_corso,.chip.st-in_corso{color:#7aa5ff}.t.st-completata,.chip.st-completata{color:var(--ok)}.t.st-droppata,.chip.st-droppata{color:var(--ko)}
 .t.st-in_pausa,.chip.st-in_pausa{color:var(--warn)}
 .risultato{cursor:pointer;padding:6px;border-radius:8px;align-items:flex-start}.risultato:hover{background:var(--pan2)}
+/* cronometro, statistiche e sonno */
+#crono{display:flex;gap:8px;align-items:center;min-width:0}
+.crono-oggi{background:none;border:1px solid var(--bordo);color:var(--tenue);border-radius:16px;padding:4px 11px;cursor:pointer;font:inherit;font-size:13px;white-space:nowrap}
+.crono-oggi b{color:var(--testo);font-weight:600}.crono-oggi:hover{border-color:var(--acc)}
+.crono-vivo{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--tenue);max-width:340px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crono-vivo b{color:var(--testo);font-variant-numeric:tabular-nums}
+.pallino{width:8px;height:8px;border-radius:50%;flex:0 0 8px;animation:pulsa 1.6s ease-in-out infinite}
+@keyframes pulsa{50%{opacity:.35}}
+.sez .crono-t{font-size:10px;color:var(--tenue);font-variant-numeric:tabular-nums;min-height:13px}
+.sez .crono-t.vivo{color:var(--ok)}
+.sez .crono-t.vivo::before{content:"● "}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:14px}
+.tile{background:var(--pan);border:1px solid var(--bordo);border-radius:10px;padding:12px 14px}
+.tile .num{font-size:24px;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
+.tile .num.piccolo{font-size:16px}
+.tit-graf{font-weight:600;font-size:15px}
+.sotto{margin:2px 0 8px;font-size:13px}
+.grafico{display:block;max-width:100%}
+.griglia-l{stroke:var(--bordo);stroke-width:1}
+.asse-t{fill:var(--tenue);font-size:11px}
+.media-l{fill:none;stroke:var(--testo);stroke-width:2;stroke-linejoin:round}
+.legenda{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--tenue);margin:4px 0 8px}
+.legenda span{display:flex;gap:6px;align-items:center}
+.legenda i{display:inline-block;width:12px;height:12px;border-radius:3px}
+.qd{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px}
+#ttip{position:fixed;z-index:30;display:none;pointer-events:none;background:var(--pan2);border:1px solid var(--bordo);border-radius:8px;padding:7px 10px;font-size:12px;line-height:1.5;box-shadow:0 4px 18px #0008;max-width:300px}
+.riga-titolo{display:grid;grid-template-columns:minmax(120px,280px) 1fr 70px;gap:10px;align-items:center;padding:4px 0}
+.riga-titolo .nome-t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.riga-titolo .barra-t{height:10px;background:var(--pan2);border-radius:5px;overflow:hidden}
+.riga-titolo .barra-t span{display:block;height:100%;border-radius:0 5px 5px 0}
+.riga-titolo .val-t{text-align:right;font-variant-numeric:tabular-nums}
+.consigli{margin:6px 0 0;padding-left:20px;line-height:1.7}
+input[type=time]{padding:4px 6px;color-scheme:dark}
 </style>
 </head>
 <body>
 <header>
   <h1>✨ PassionOrganizer</h1>
   <div class="spazio"></div>
+  <div id="crono"></div>
   <div id="progresso"></div>
   <button class="b" id="btnScan" onclick="scansiona(false)"></button>
   <button class="b" id="btnEsci" onclick="esci()">⏻</button>
@@ -100,11 +134,13 @@ th{color:var(--tenue);font-weight:500;font-size:12px}
 </div>
 <div id="modale" onclick="if(event.target===this)chiudiModale()"><div class="box" id="mbox"></div></div>
 <div id="toast"></div>
+<div id="ttip"></div>
 
 <script src="/static/i18n.js"></script>
 <script src="/static/media.js"></script>
 <script src="/static/telefono.js"></script>
 <script src="/static/benvenuto.js"></script>
+<script src="/static/tempo.js"></script>
 <script>
 let D = {giochi:[], dischi:[], doppioni:[], cestini:[], fonti:[]};
 let PER_ID = {};
@@ -144,7 +180,7 @@ function modale(html){document.getElementById("mbox").innerHTML=html;document.ge
 function chiudiModale(){document.getElementById("modale").style.display="none"}
 
 const VISTE = ["libreria","recenti","installer","doppioni","spazio","riordina"];        // schede della sezione Giochi
-const SEZIONI = [["giochi","🎮"],["serie","📺"],["film","🎬"],["anime","⛩️"]];
+const SEZIONI = [["giochi","🎮"],["serie","📺"],["film","🎬"],["anime","⛩️"],["statistiche","📊"],["sonno","😴"]];
 let sezione = "giochi";
 
 function disegnaNav(){
@@ -155,8 +191,9 @@ function disegnaNav(){
   // barra laterale: le quattro sezioni (con quanti titoli sono in corso) + impostazioni in fondo
   const inCorso = c => M.titoli.filter(x => x.categoria === c && x.stato === "in_corso").length;
   document.getElementById("lato").innerHTML = SEZIONI.map(([k, ic]) => {
-    const n = k === "giochi" ? 0 : inCorso(k);
-    return `<button class="sez ${sezione===k?"attivo":""}" onclick="vaiSezione('${k}')"><span class="ic">${ic}</span>${t("sez_"+k)}${n?`<span class="badge-n">${n}</span>`:""}</button>`;
+    const n = ["serie","film","anime"].includes(k) ? inCorso(k) : 0;
+    const crono = CAT_TEMPO.includes(k) ? `<span class="crono-t" id="crono-${k}"></span>` : "";
+    return `<button class="sez ${sezione===k?"attivo":""}" onclick="vaiSezione('${k}')"><span class="ic">${ic}</span>${t("sez_"+k)}${crono}${n?`<span class="badge-n">${n}</span>`:""}</button>`;
   }).join("") + `<button class="sez fondo ${sezione==="impostazioni"?"attivo":""}" onclick="vaiSezione('impostazioni')"><span class="ic">⚙️</span>${t("sez_impostazioni")}</button>`;
   // schede in alto: solo nella sezione Giochi
   document.getElementById("nav").innerHTML = sezione !== "giochi" ? "" : VISTE.map(k => {
@@ -192,8 +229,9 @@ function disegna(){
     m.innerHTML = {libreria:vLibreria, recenti:vRecenti, installer:vInstaller, doppioni:vDoppioni, spazio:vSpazio, riordina:vRiordina}[vista]();
     if (vista==="riordina") caricaRegistro();
   } else {
-    m.innerHTML = {serie:vSerie, film:vFilm, anime:vAnime, impostazioni:vImpostazioni}[sezione]();
+    m.innerHTML = {serie:vSerie, film:vFilm, anime:vAnime, statistiche:vStatistiche, sonno:vSonno, impostazioni:vImpostazioni}[sezione]();
   }
+  disegnaCrono();
 }
 
 // ------------------------------------------------------------ card
@@ -711,11 +749,12 @@ async function esci(){ if (confirm(t("esci_conferma"))) { await api("/api/esci",
 (() => {   // es. ...5577/#anime oppure #giochi/recenti
   const [a, b] = location.hash.slice(1).split("/");
   if (VISTE.includes(a)) { sezione = "giochi"; vista = a; }
-  else if (["serie","film","anime","impostazioni"].includes(a)) sezione = a;
+  else if (["serie","film","anime","statistiche","sonno","impostazioni"].includes(a)) sezione = a;
   if (a === "anime" && b === "stagione") window._apriStagione = true;
   else if (a === "giochi" && VISTE.includes(b)) vista = b;
 })();
 caricaMedia().catch(()=>{}).finally(() => carica().then(controllaStato));
+aggiornaCrono();
 </script>
 </body>
 </html>

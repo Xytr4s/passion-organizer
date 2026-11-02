@@ -19,3 +19,5 @@ build/
 *.spec
 estensione_ultima.json
 estensione_impostazioni.json
+tempo.json
+tempo.tmp

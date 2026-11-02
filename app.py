@@ -404,6 +404,7 @@ def api_fonti():
 
 import media
 import sincronizza
+import tempo
 
 
 @app.after_request
@@ -626,6 +627,96 @@ def api_estensione_analizza():
                    visti=(media.stagione_attuale(trovato) or {}).get("visti") if trovato else None)
 
 
+# ---------------------------------------------------------------- tempo di gioco e di visione
+
+_titoli_video = {}        # indirizzo della pagina -> (titolo della scheda, categoria, titolo riconosciuto)
+
+
+def titolo_video(j):
+    """Titolo con cui registrare il tempo di un video: quello già in lista se lo si riconosce,
+    altrimenti quello letto dalla pagina."""
+    categoria = j.get("categoria") if j.get("categoria") in ("serie", "film", "anime") else "serie"
+    chiave = (j.get("url", ""), j.get("titolo", ""))
+    if chiave in _titoli_video:
+        return _titoli_video[chiave]
+    titolo = media.analizza_dati(j)[0]
+    if titolo:
+        d = media.carica()
+        t, punti = media.abbina(d, titolo, categoria)
+        if not (t and punti >= 0.85):
+            t, punti = media.abbina(d, titolo)
+        if t and punti >= 0.85:
+            titolo, categoria = t["titolo"], t["categoria"]
+    if not titolo:
+        titolo = (j.get("titolo") or j.get("sito") or "?").strip()[:120]
+    if len(_titoli_video) > 500:
+        _titoli_video.clear()
+    _titoli_video[chiave] = (categoria, titolo)
+    return categoria, titolo
+
+
+@app.route("/api/tempo/battito", methods=["POST", "OPTIONS"])
+def api_tempo_battito():
+    """Dall'estensione: 15 secondi di video in riproduzione (anche più battiti insieme, tenuti da parte
+    mentre l'app era chiusa: ognuno ha l'ora in cui è avvenuto)."""
+    if request.method == "OPTIONS":
+        return ("", 204)
+    j = request.get_json(force=True, silent=True) or {}
+    battiti = j.get("battiti") if isinstance(j.get("battiti"), list) else [j]
+    adesso = time.time()
+    n = 0
+    for b in battiti[:20000]:
+        if not isinstance(b, dict):
+            continue
+        quando = b.get("quando")
+        quando = quando / 1000 if isinstance(quando, (int, float)) else adesso
+        if quando > adesso + 60 or quando < adesso - 30 * 86400:
+            continue
+        categoria, titolo = titolo_video(b)
+        tempo.registra(categoria, titolo, quando)
+        n += 1
+    if n > 1:
+        tempo.salva()
+    return jsonify(ok=True, registrati=n)
+
+
+@app.get("/api/tempo/oggi")
+def api_tempo_oggi():
+    return jsonify(tempo.oggi())
+
+
+@app.get("/api/tempo/statistiche")
+def api_tempo_statistiche():
+    try:
+        giorni = int(request.args.get("giorni", 30))
+    except ValueError:
+        giorni = 30
+    return jsonify(tempo.statistiche(giorni))
+
+
+@app.get("/api/tempo/sonno")
+def api_tempo_sonno():
+    try:
+        giorni = max(7, min(400, int(request.args.get("giorni", 60))))
+    except ValueError:
+        giorni = 60
+    return jsonify(tempo.sonno(giorni))
+
+
+@app.post("/api/tempo/sonno")
+def api_tempo_sonno_salva():
+    """Orari veri di una notte ({data, letto, sveglia}; senza orari si torna alla stima) o l'obiettivo ({obiettivo})."""
+    j = request.get_json(force=True, silent=True) or {}
+    try:
+        if "obiettivo" in j:
+            tempo.imposta_obiettivo(j["obiettivo"])
+        else:
+            tempo.imposta_notte(str(j["data"]), j.get("letto") or None, j.get("sveglia") or None)
+    except (KeyError, ValueError, TypeError):
+        return jsonify(ok=False, messaggio="Orari non validi"), 400
+    return jsonify(ok=True)
+
+
 # ---------------------------------------------------------------- avvio automatico con Windows
 
 def collegamento_avvio():
@@ -683,6 +774,7 @@ def api_avvio_set():
 
 @app.post("/api/esci")
 def api_esci():
+    tempo.salva()
     threading.Timer(0.5, lambda: os._exit(0)).start()
     return jsonify(ok=True)
 
@@ -713,6 +805,7 @@ if __name__ == "__main__":
             webview.start()
         sys.exit()
 
+    tempo.avvia_controllo(giochi)                     # tempo di gioco: gioco in primo piano ogni 15 s
     threading.Thread(target=cerca_copertine, daemon=True).start()
     threading.Thread(target=_carica_velocita, daemon=True).start()
     sincronizza.avvia_in_background()                 # telefono: ogni 5 minuti e dopo ogni modifica
@@ -726,8 +819,13 @@ if __name__ == "__main__":
     if usa_browser:
         threading.Timer(1.0, lambda: webbrowser.open(url)).start()
         avvia_server()
+    elif "--avvio" in sys.argv:
+        # All'accensione del PC: solo in background (conta il tempo di gioco e riceve i dati dell'estensione).
+        # La finestra si apre lanciando di nuovo PassionOrganizer, che trova il server già attivo.
+        avvia_server()
     else:
-        # Finestra propria, come un normale programma; chiudendola si chiude tutto.
+        # Finestra propria, come un normale programma. Chiudendola l'app resta attiva in background
+        # (per contare il tempo); si chiude del tutto con il pulsante ⏻.
         import webview
         threading.Thread(target=avvia_server, daemon=True).start()
         while not porta_occupata():
@@ -735,4 +833,6 @@ if __name__ == "__main__":
         webview.create_window("PassionOrganizer", url, width=1360, height=880, min_size=(800, 560),
                               background_color="#12141A", js_api=ApiFinestra())
         webview.start()
-        os._exit(0)
+        tempo.salva()
+        while True:
+            time.sleep(3600)
