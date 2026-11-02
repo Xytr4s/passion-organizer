@@ -308,7 +308,7 @@ def analizza_dati(j):
     risultato = analizza_pagina(titolo, url, sito)
     if risultato[2] is None:
         d = j.get("diagnostica") or {}
-        for campo in ("player", "h1", "h2", "og"):
+        for campo in ("inertia", "player", "h1", "h2", "og"):
             testo = (d.get(campo) or "").strip()
             if not testo:
                 continue
@@ -326,8 +326,8 @@ def analizza_pagina(titolo_pagina, url="", nome_sito=""):
     # parametri espliciti nell'indirizzo: "?season=1&episode=3" (1Shows), "?stagione=2&episodio=5"
     from urllib.parse import urlsplit, parse_qs
     q = {k.lower(): v[0] for k, v in parse_qs(urlsplit(url).query).items() if v}
-    s_q = next((q[k] for k in ("season", "stagione", "s") if q.get(k, "").isdigit()), None)
-    e_q = next((q[k] for k in ("episode", "episodio", "ep", "e") if q.get(k, "").isdigit()), None)
+    s_q = next((q[k] for k in ("season", "stagione") if q.get(k, "").isdigit()), None)
+    e_q = next((q[k] for k in ("episode", "episodio", "ep") if q.get(k, "").isdigit()), None)
     if e_q:
         stagione, episodio = (int(s_q) if s_q else None), int(e_q)
     # S2E4, S02 E04, S2:E4, S2.E4, S2-E4, S2 - E4; "Season 4, Ep. 2", "Stagione 4 ep. 2", "St. 4 Ep. 2" (Prime Video)
@@ -343,6 +343,12 @@ def analizza_pagina(titolo_pagina, url="", nome_sito=""):
         m = re.search(r"\b(?:episodio|episode|ep)\.?\s*(\d{1,4})\b", testo, re.I)
         if m:
             episodio = int(m.group(1))
+    # "?s=2&e=5" solo come ultima risorsa e solo con numeri piccoli: su StreamingUnity "?e=123456" è il codice
+    # interno dell'episodio, non il suo numero
+    if episodio is None and q.get("e", "").isdigit() and len(q["e"]) <= 3:
+        episodio = int(q["e"])
+        if stagione is None and q.get("s", "").isdigit() and len(q["s"]) <= 2:
+            stagione = int(q["s"])
     if stagione is None:
         m = re.search(r"\b(?:stagione|season)\s*(\d{1,2})\b", testo, re.I) \
             or re.search(r"\s[-–|:]\s*S(\d{1,2})\s*$", titolo_pagina)       # "The Terminal List - S2" (Prime Video)

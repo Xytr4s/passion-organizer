@@ -46,7 +46,27 @@ function episodioEvidenziato() {
   return ripiego;
 }
 
+// Siti fatti con Inertia (StreamingUnity/StreamingCommunity): il titolo della scheda è solo "Watch Serie" e il
+// player sta in un iframe, ma i dati della pagina (serie, stagione, episodio) sono nella cronologia del browser
+// (aggiornata anche passando all'episodio successivo) o nell'attributo data-page di #app.
+function datiInertia() {
+  let p = null;
+  try { p = (window.wrappedJSObject || window).history.state?.page; } catch (e) {}
+  if (!p?.props) {
+    try { p = JSON.parse(document.querySelector("#app[data-page]")?.dataset.page || "null"); } catch (e) {}
+  }
+  const pr = p?.props;
+  const ep = pr?.episode;
+  if (!ep || ep.number == null) return null;
+  const nome = pr.title?.name || pr.title?.original_name || "";
+  let st = ep.season?.number ?? pr.season?.number ?? null;
+  if (st == null && ep.season_id != null) st = (pr.title?.seasons || []).find(s => s.id === ep.season_id)?.number ?? null;
+  return `${nome} ${st != null ? `S${st}E${ep.number}` : `Episodio ${ep.number}`}`.trim();
+}
+
 function titoloPagina() {
+  const inertia = datiInertia();
+  if (inertia) return inertia;
   const og = document.querySelector('meta[property="og:title"]')?.content || "";
   const h1 = document.querySelector("h1")?.innerText || "";
   const h2 = document.querySelector("h2")?.innerText || "";
@@ -70,7 +90,7 @@ function diagnostica() {
     .filter(t => !t.endsWith(": ")).slice(0, 15);
   return { titolo_scheda: document.title, og: document.querySelector('meta[property="og:title"]')?.content || "",
            h1: document.querySelector("h1")?.innerText?.slice(0, 120) || "", h2: document.querySelector("h2")?.innerText?.slice(0, 120) || "",
-           evidenziati: testi, player: scrittaPlayer() || "" };
+           evidenziati: testi, player: scrittaPlayer() || "", inertia: datiInertia() || "" };
 }
 
 // il riquadro dell'estensione chiede cosa c'è in questa pagina (funziona anche su un sito appena aggiunto)

@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "PassionOrganizer – Tracker episodi",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "Segna in PassionOrganizer gli episodi di serie TV, film e anime che guardi.",
   "browser_specific_settings": {
     "gecko": {
