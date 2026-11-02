@@ -46,7 +46,7 @@ async function analizzaScheda() {
   }
   let letto = null;
   try { letto = await browser.tabs.sendMessage(scheda.id, { tipo: "pagina" }); } catch (e) { /* pagina da ricaricare */ }
-  const pagina = { titolo: letto?.titolo || scheda.title, url: scheda.url, sito: sito.parola, categoria: sito.categoria,
+  const pagina = { titolo: letto?.titolo || scheda.title, url: scheda.url, sito: sito.parola, categoria: letto?.film ? "film" : sito.categoria,
                    diagnostica: letto?.diagnostica };
   const a = await browser.runtime.sendMessage({ tipo: "analizza", pagina });
   if (!a || a.errore) { $("analisi").innerHTML = `<span class="ko">${a?.errore || "Errore"}</span>`; return; }

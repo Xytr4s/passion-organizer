@@ -130,7 +130,7 @@ browser.runtime.onMessage.addListener(msg => {
   if (msg.tipo !== "pagina") return;
   // solo sulle pagine che sembrano fatte con Inertia (contenitore #app), per non riscaricare pagine qualsiasi
   const prima = document.getElementById("app") ? aggiornaInertia() : Promise.resolve();
-  return prima.then(() => ({ titolo: titoloPagina(), url: location.href, diagnostica: diagnostica() }));
+  return prima.then(() => ({ titolo: titoloPagina(), url: location.href, film: !!filmInertia(), diagnostica: diagnostica() }));
 });
 
 (async () => {
