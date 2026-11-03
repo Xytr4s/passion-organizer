@@ -204,6 +204,7 @@ def api_libreria():
         "fonti": scanner.carica_config()["fonti"],
         "lingua": scanner.carica_config().get("lingua", "it"),
         "configurato": scanner.carica_config().get("configurato", True),
+        "bot": bot_trading.cartella() is not None,
     })
 
 
@@ -405,6 +406,7 @@ def api_fonti():
 import media
 import sincronizza
 import tempo
+import bot_trading
 
 
 @app.after_request
@@ -831,6 +833,40 @@ def api_avvio_set():
     except Exception as e:
         return jsonify(ok=False, attivo=collegamento_avvio().exists(), messaggio=str(e)), 500
     return jsonify(ok=True, attivo=collegamento_avvio().exists())
+
+
+# ---------------------------------------------------------------- bot di trading (cartella esterna, facoltativo)
+
+@app.get("/api/bot")
+def api_bot():
+    return jsonify(bot_trading.stato())
+
+
+@app.post("/api/bot")
+def api_bot_azione():
+    """{cartella}: imposta la cartella del bot; {esegui: confronto|prova|stato}; {apri: true}: apre la cartella."""
+    j = request.get_json(force=True, silent=True) or {}
+    try:
+        if "cartella" in j:
+            bot_trading.imposta_cartella(j["cartella"])
+        elif j.get("esegui"):
+            bot_trading.esegui(j["esegui"])
+        elif j.get("apri"):
+            bot_trading.apri_cartella()
+    except ValueError as e:
+        return jsonify(ok=False, messaggio=str(e)), 400
+    return jsonify(ok=True, **bot_trading.stato())
+
+
+@app.get("/bot/report/<nome>")
+def bot_report(nome):
+    """I report HTML del bot, mostrati dentro la sezione Bot (solo i file previsti)."""
+    p = bot_trading.percorso_report(nome)
+    if not p:
+        return ("Report non disponibile", 404)
+    r = send_from_directory(p.parent, p.name)
+    r.headers["Cache-Control"] = "no-store"
+    return r
 
 
 @app.post("/api/esci")

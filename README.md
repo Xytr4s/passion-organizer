@@ -84,6 +84,12 @@ prefixes in `__ins` (`x0235 …` = good, `L0236 …` = bad); **⭐ Rate unrated 
 - To count, the app must be running: closing the window **keeps it running in the background**; at Windows startup it starts
   in the background (open the window by launching PassionOrganizer). To quit completely: the ⏻ button.
 
+## Trading bot (optional)
+
+If you run a Python trading bot with a `bot.py` and a `report/` folder of HTML pages, set its folder in **Settings**: the
+📈 **Trading bot** section appears with mode, capital, Task Scheduler runs (last, result, next), errors, the `confronto`,
+`prova` and `stato` commands (none of them sends orders) and the reports inside the window. Without a folder the section stays hidden.
+
 ## Safety
 
 - Every file operation shows a **preview** first; rename / move / "set aside" can be **undone**.
@@ -111,6 +117,7 @@ The interface is available in **Italian** and **English** (*Settings → Languag
 | `scanner.py` | Drive scanning, name cleaning, versions, main executable, Steam, duplicates |
 | `operazioni.py` | Preview / run / undo of rename, move, delete |
 | `media.py` | Series / movies / anime tracker, metadata search, extension matching |
+| `bot_trading.py` | Optional "Trading bot" section: status, scheduled runs, no-order commands and reports of a bot living in another folder |
 | `tempo.py` | Play and watch time, PC use, stats, sleep estimate, stop-time reminder |
 | `avviso.py` | Reminder notice window (always on top, doesn't take the keyboard) |
 | `sincronizza.py` | Sync with the Google Sheet for the phone |

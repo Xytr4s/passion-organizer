@@ -84,6 +84,13 @@ dai prefissi delle cartelle in `__ins` (`x0235 …` = bello, `L0236 …` = brutt
 - Per contare, l'app deve essere in esecuzione: chiudendo la finestra **resta attiva in background**; all'avvio di Windows parte
   già in background (la finestra si apre lanciando PassionOrganizer). Per chiuderla del tutto: pulsante ⏻.
 
+## Bot di trading (facoltativo)
+
+Se usi un bot di trading in Python con `bot.py` e una cartella `report/` di pagine HTML, in **Impostazioni** puoi indicarne
+la cartella: compare la sezione 📈 **Bot di trading** con modalità, capitale, giri automatici dell'Utilità di pianificazione
+(ultimo, esito, prossimo), eventuali errori, i comandi `confronto`, `prova` e `stato` (nessuno invia ordini) e i report
+dentro la finestra. Senza cartella la sezione non compare.
+
 ## Sicurezza
 
 - Ogni operazione sui file mostra prima un'**anteprima**; rinomina / sposta / "metti da parte" si possono **annullare**.
@@ -111,6 +118,7 @@ L'interfaccia è disponibile in **italiano** e **inglese** (*Impostazioni → Li
 | `scanner.py` | Scansione dischi, pulizia nomi, versioni, eseguibile principale, Steam, doppioni |
 | `operazioni.py` | Anteprima / esecuzione / annullamento di rinomina, spostamento, eliminazione |
 | `media.py` | Tracker di serie / film / anime, ricerca schede, riconoscimento per l'estensione |
+| `bot_trading.py` | Sezione facoltativa "Bot di trading": stato, giri pianificati, comandi senza ordini e report di un bot in un'altra cartella |
 | `tempo.py` | Tempo di gioco e di visione, uso del PC, statistiche, stima del sonno, promemoria dell'ora di stop |
 | `avviso.py` | Finestrella del promemoria (sempre in primo piano, non prende la tastiera) |
 | `sincronizza.py` | Sincronizzazione con il Foglio Google del telefono |

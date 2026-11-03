@@ -107,6 +107,7 @@ th{color:var(--tenue);font-weight:500;font-size:12px}
 .legenda i{display:inline-block;width:12px;height:12px;border-radius:3px}
 .qd{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px}
 .sett-riga,.sett-scala{display:flex;align-items:center;gap:10px;margin:3px 0}.sett-et{width:64px;flex:none;font-size:12px;color:var(--tenue);text-align:right}.sett-val{width:130px;flex:none;font-size:13px;white-space:nowrap}.sett-barra{flex:1;display:flex;gap:2px;height:20px;min-width:0}.sett-barra i{display:block;height:100%;border-radius:3px;min-width:0}.sett-riga:hover .sett-barra{filter:brightness(1.15)}.sett-assi{flex:1;display:flex;font-size:11px;color:var(--tenue)}.sett-assi span{flex:1;text-align:center;border-left:1px solid var(--bordo)}i.futuro{border:1px dashed var(--bordo);box-sizing:border-box;background:transparent!important}.legenda i.futuro{display:inline-block}@media(max-width:600px){.sett-val{width:90px}.sett-et{width:48px}}
+.bot-frame{width:100%;height:calc(100vh - 150px);min-height:520px;border:1px solid var(--bordo);border-radius:10px;background:#12141a}.bot-uscita{max-height:320px;overflow:auto;background:var(--bg);border:1px solid var(--bordo);border-radius:8px;padding:10px;font:12px Consolas,monospace;white-space:pre-wrap;margin:8px 0 0}.bot-errore{border-color:var(--ko)}.bot-errore pre{white-space:pre-wrap;font:12px Consolas,monospace;color:var(--tenue);margin:6px 0 0}.bot-giro{margin-top:6px;font-size:13px}.chip:disabled{opacity:.4;cursor:default}
 #ttip{position:fixed;z-index:30;display:none;pointer-events:none;background:var(--pan2);border:1px solid var(--bordo);border-radius:8px;padding:7px 10px;font-size:12px;line-height:1.5;box-shadow:0 4px 18px #0008;max-width:300px}
 .riga-titolo{display:grid;grid-template-columns:minmax(120px,280px) 1fr 70px;gap:10px;align-items:center;padding:4px 0}
 .riga-titolo .nome-t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -142,6 +143,7 @@ input[type=time]{padding:4px 6px;color-scheme:dark}
 <script src="/static/telefono.js"></script>
 <script src="/static/benvenuto.js"></script>
 <script src="/static/tempo.js"></script>
+<script src="/static/bot.js"></script>
 <script>
 let D = {giochi:[], dischi:[], doppioni:[], cestini:[], fonti:[]};
 let PER_ID = {};
@@ -191,7 +193,8 @@ function disegnaNav(){
   document.documentElement.lang = LINGUA;
   // barra laterale: le quattro sezioni (con quanti titoli sono in corso) + impostazioni in fondo
   const inCorso = c => M.titoli.filter(x => x.categoria === c && x.stato === "in_corso").length;
-  document.getElementById("lato").innerHTML = SEZIONI.map(([k, ic]) => {
+  const sezioni = SEZIONI.concat(D && D.bot ? [["bot","📈"]] : []);    // il bot compare solo se ne è impostata la cartella
+  document.getElementById("lato").innerHTML = sezioni.map(([k, ic]) => {
     const n = ["serie","film","anime"].includes(k) ? inCorso(k) : 0;
     const crono = CAT_TEMPO.includes(k) ? `<span class="crono-t" id="crono-${k}"></span>` : "";
     return `<button class="sez ${sezione===k?"attivo":""}" onclick="vaiSezione('${k}')"><span class="ic">${ic}</span>${t("sez_"+k)}${crono}${n?`<span class="badge-n">${n}</span>`:""}</button>`;
@@ -230,7 +233,7 @@ function disegna(){
     m.innerHTML = {libreria:vLibreria, recenti:vRecenti, installer:vInstaller, doppioni:vDoppioni, spazio:vSpazio, riordina:vRiordina}[vista]();
     if (vista==="riordina") caricaRegistro();
   } else {
-    m.innerHTML = {serie:vSerie, film:vFilm, anime:vAnime, statistiche:vStatistiche, sonno:vSonno, impostazioni:vImpostazioni}[sezione]();
+    m.innerHTML = {serie:vSerie, film:vFilm, anime:vAnime, statistiche:vStatistiche, sonno:vSonno, bot:vBot, impostazioni:vImpostazioni}[sezione]();
   }
   disegnaCrono();
 }
@@ -696,6 +699,7 @@ async function cambiaLingua(l){
 function vImpostazioni(){
   setTimeout(caricaAvvioAuto);
   setTimeout(caricaTelefono);
+  setTimeout(async () => { const b = await api("/api/bot"); const el = document.getElementById("impBot"); if (el) el.innerHTML = campoCartellaBot(b.cartella); });
   return `<div class="blocco"><h3 style="margin-top:0">🌐 Lingua / Language</h3>
     <select onchange="cambiaLingua(this.value)">${Object.entries(LINGUE).map(([k,n])=>`<option value="${k}" ${LINGUA===k?"selected":""}>${n}</option>`).join("")}</select></div>
     <div class="blocco"><h3 style="margin-top:0">${t("avvio_titolo")}</h3>
@@ -703,6 +707,7 @@ function vImpostazioni(){
       <input type="checkbox" id="chkAvvio" disabled onchange="cambiaAvvioAuto(this.checked)"> ${t("avvio_chk")}</label>
     <p class="tenue" style="margin-bottom:0">${t("avvio_info")}</p></div>
     <div class="blocco"><h3 style="margin-top:0">📱 ${t("tel_titolo")}</h3><div id="telefono" class="tenue">…</div></div>
+    <div class="blocco"><h3 style="margin-top:0">📈 ${t("sez_bot")}</h3><p class="tenue">${t("bot_imp_info")}</p><div id="impBot">…</div></div>
     <div class="blocco"><h3 style="margin-top:0">${t("cartelle_titolo")}</h3>
     <p class="tenue">${t("cartelle_info")}</p>
     <textarea id="fonti" rows="12" style="width:100%;font-family:Consolas,monospace">${esc(D.fonti.join("\n"))}</textarea>
@@ -750,7 +755,7 @@ async function esci(){ if (confirm(t("esci_conferma"))) { await api("/api/esci",
 (() => {   // es. ...5577/#anime oppure #giochi/recenti
   const [a, b] = location.hash.slice(1).split("/");
   if (VISTE.includes(a)) { sezione = "giochi"; vista = a; }
-  else if (["serie","film","anime","statistiche","sonno","impostazioni"].includes(a)) sezione = a;
+  else if (["serie","film","anime","statistiche","sonno","bot","impostazioni"].includes(a)) sezione = a;
   if (a === "anime" && b === "stagione") window._apriStagione = true;
   else if (a === "giochi" && VISTE.includes(b)) vista = b;
 })();
